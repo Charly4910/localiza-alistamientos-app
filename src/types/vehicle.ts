@@ -11,8 +11,9 @@ export type PhotoType =
   | 'panoramico'
   | 'izquierda'
   | 'panoramico_interno'
-  | 'interior_delantero'
-  | 'interior_trasero'
+  | 'interior_1'
+  | 'interior_2'
+  | 'interior_3'
   | 'interior_techo'
   | 'llanta_p1'
   | 'llanta_p2'
@@ -28,6 +29,7 @@ export interface VehicleInspection {
   placa: string;
   photos: VehiclePhoto[];
   observaciones: string;
+  fechaVencimientoExtintor?: string;
   inspector: {
     email: string;
     name: string;
@@ -40,8 +42,9 @@ export const PHOTO_LABELS: Record<PhotoType, string> = {
   panoramico: 'Foto Panorámica',
   izquierda: 'Foto Parte Izquierda',
   panoramico_interno: 'Foto Panorámica Interna',
-  interior_delantero: 'Interior Parte Delantera',
-  interior_trasero: 'Interior Parte Trasera',
+  interior_1: 'Interior - Foto 1',
+  interior_2: 'Interior - Foto 2',
+  interior_3: 'Interior - Foto 3',
   interior_techo: 'Interior Techo',
   llanta_p1: 'Foto Llanta P1',
   llanta_p2: 'Foto Llanta P2',

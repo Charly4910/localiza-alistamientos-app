@@ -70,16 +70,42 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-gradient-to-br from-green-50 to-green-100 text-foreground min-h-screen;
   }
 }
 
 .localiza-gradient {
-  background: linear-gradient(135deg, hsl(var(--localiza-green)) 0%, hsl(var(--localiza-green-light)) 100%);
+  background: linear-gradient(135deg, #00A14B 0%, #4CAF50 100%);
+}
+
+.localiza-logo {
+  width: 120px;
+  height: 40px;
+  background: linear-gradient(135deg, #00A14B 0%, #4CAF50 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 18px;
+  letter-spacing: 1px;
 }
 
 .photo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.photo-button {
+  @apply bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-6 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex flex-col items-center space-y-3 min-h-[120px] justify-center;
+}
+
+.photo-button-captured {
+  @apply bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700;
+}
+
+.card-professional {
+  @apply bg-white/80 backdrop-blur-sm border border-green-200 shadow-xl rounded-2xl;
 }
