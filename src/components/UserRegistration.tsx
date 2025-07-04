@@ -3,19 +3,22 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { User } from '@/types/vehicle';
+import { User, Department, DEFAULT_DEPARTMENTS } from '@/types/vehicle';
 
 interface UserRegistrationProps {
   email: string;
   name: string;
   onUserRegistered: (user: User) => void;
   existingUsers: User[];
+  departments?: Department[];
 }
 
-const UserRegistration = ({ email, name, onUserRegistered, existingUsers }: UserRegistrationProps) => {
+const UserRegistration = ({ email, name, onUserRegistered, existingUsers, departments = DEFAULT_DEPARTMENTS }: UserRegistrationProps) => {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -40,6 +43,15 @@ const UserRegistration = ({ email, name, onUserRegistered, existingUsers }: User
       return;
     }
 
+    if (!selectedDepartment) {
+      toast({
+        title: "Departamento requerido",
+        description: "Por favor selecciona tu departamento",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Verificar si el PIN ya existe
     if (existingUsers.some(user => user.pin === pin)) {
       toast({
@@ -58,6 +70,7 @@ const UserRegistration = ({ email, name, onUserRegistered, existingUsers }: User
       name,
       pin,
       isAdmin: false,
+      department: selectedDepartment,
       createdAt: new Date()
     };
 
@@ -72,23 +85,45 @@ const UserRegistration = ({ email, name, onUserRegistered, existingUsers }: User
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="localiza-gradient text-white p-4 rounded-lg mb-4 mx-auto w-16 h-16 flex items-center justify-center">
-            <span className="text-2xl font-bold">L</span>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100 p-3">
+      <Card className="w-full max-w-sm border-green-200/50 shadow-2xl">
+        <CardHeader className="text-center pb-4">
+          <div className="mb-3 mx-auto">
+            <img 
+              src="/lovable-uploads/8a6198c5-9438-452d-9133-4cb2bd965c0d.png" 
+              alt="Localiza Logo" 
+              className="h-12 w-auto mx-auto"
+            />
           </div>
-          <CardTitle className="text-2xl font-bold text-green-800">
+          <CardTitle className="text-lg font-bold text-green-800">
             Crear PIN Personal
           </CardTitle>
-          <p className="text-sm text-gray-600">
+          <p className="text-xs text-gray-600">
             Bienvenido/a {name}
           </p>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="px-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label htmlFor="pin" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="department" className="block text-xs font-medium text-gray-700 mb-1">
+                Departamento
+              </label>
+              <Select value={selectedDepartment} onValueChange={setSelectedDepartment} required>
+                <SelectTrigger className="text-sm h-10">
+                  <SelectValue placeholder="Selecciona tu departamento" />
+                </SelectTrigger>
+                <SelectContent className="max-h-48">
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.name} className="text-sm">
+                      {dept.name} ({dept.abbreviation})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label htmlFor="pin" className="block text-xs font-medium text-gray-700 mb-1">
                 PIN de 4 dígitos
               </label>
               <Input
@@ -98,13 +133,13 @@ const UserRegistration = ({ email, name, onUserRegistered, existingUsers }: User
                 onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                 placeholder="0000"
                 maxLength={4}
-                className="text-center text-2xl tracking-widest"
+                className="text-center text-lg tracking-widest h-10"
                 required
               />
             </div>
             
             <div>
-              <label htmlFor="confirmPin" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="confirmPin" className="block text-xs font-medium text-gray-700 mb-1">
                 Confirmar PIN
               </label>
               <Input
@@ -114,14 +149,14 @@ const UserRegistration = ({ email, name, onUserRegistered, existingUsers }: User
                 onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                 placeholder="0000"
                 maxLength={4}
-                className="text-center text-2xl tracking-widest"
+                className="text-center text-lg tracking-widest h-10"
                 required
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full localiza-gradient hover:opacity-90 transition-opacity"
+              className="w-full localiza-gradient hover:opacity-90 transition-opacity h-10 text-sm"
               disabled={isLoading}
             >
               {isLoading ? 'Creando PIN...' : 'Crear PIN Personal'}

@@ -123,42 +123,95 @@
   animation: fadeInOut 2s ease-in-out infinite;
 }
 
-/* Responsive breakpoints específicos */
+/* Responsive breakpoints específicos - Optimizados para móvil */
 @media (max-width: 640px) {
   .container {
-    @apply px-3;
+    @apply px-2;
   }
   
   .localiza-logo {
-    width: 100px;
-    height: 35px;
-    font-size: 16px;
+    width: 80px;
+    height: 30px;
+    font-size: 14px;
   }
   
   h1 {
-    @apply text-2xl;
+    @apply text-xl;
   }
   
   h2 {
-    @apply text-xl;
+    @apply text-lg;
+  }
+
+  /* Mejoras específicas para formularios en móvil */
+  .photo-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .tabs-list {
+    flex-direction: row;
+    height: 40px;
+  }
+  
+  .modal-content {
+    margin: 0.5rem;
+    max-height: calc(100vh - 1rem);
+    border-radius: 12px;
+  }
+
+  /* Botones optimizados para táctil */
+  button {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  /* Inputs táctiles amigables */
+  input, select, textarea {
+    min-height: 44px;
+    font-size: 16px; /* Previene zoom en iOS */
+  }
+
+  /* Spacing reducido para móvil */
+  .space-y-6 > * + * {
+    margin-top: 1rem !important;
+  }
+
+  .space-y-4 > * + * {
+    margin-top: 0.75rem !important;
   }
 }
 
 @media (min-width: 641px) and (max-width: 768px) {
   .container {
-    @apply px-4;
+    @apply px-3;
+  }
+
+  .photo-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
   }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
   .container {
-    @apply px-6;
+    @apply px-4;
+  }
+
+  .photo-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
   }
 }
 
 @media (min-width: 1025px) {
   .container {
-    @apply px-8;
+    @apply px-6;
+  }
+
+  .photo-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
   }
 }
 
@@ -171,7 +224,7 @@
   }
 }
 
-/* Mejoras para accesibilidad */
+/* Mejoras para accesibilidad y táctil */
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,
@@ -194,37 +247,14 @@
   backface-visibility: hidden;
 }
 
-/* Estilos específicos para móviles */
-@media (max-width: 768px) {
-  .photo-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+/* Estilos para touch devices */
+@media (hover: none) and (pointer: coarse) {
+  button:hover {
+    background-color: inherit;
   }
   
-  .tabs-list {
-    flex-direction: column;
-    height: auto;
-  }
-  
-  .modal-content {
-    margin: 1rem;
-    max-height: calc(100vh - 2rem);
-  }
-}
-
-/* Estilos para tablets */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .photo-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.25rem;
-  }
-}
-
-/* Estilos para desktop */
-@media (min-width: 1025px) {
-  .photo-grid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
+  .hover\:bg-green-600:hover {
+    background-color: inherit;
   }
 }
 
@@ -247,5 +277,32 @@
   * {
     -webkit-print-color-adjust: exact !important;
     color-adjust: exact !important;
+  }
+}
+
+/* Mejoras específicas para viewport móvil */
+@supports (-webkit-touch-callout: none) {
+  .min-h-screen {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Mejoras para botones en dispositivos táctiles */
+.touch-button {
+  @apply min-h-[44px] min-w-[44px] touch-manipulation;
+}
+
+/* Prevenir zoom en inputs en iOS */
+@supports (-webkit-touch-callout: none) {
+  input[type="email"],
+  input[type="number"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="text"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: 16px;
   }
 }

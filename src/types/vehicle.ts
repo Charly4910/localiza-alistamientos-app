@@ -23,8 +23,15 @@ export type PhotoType =
   | 'llanta_p2'
   | 'derecha';
 
+export interface Department {
+  id: string;
+  name: string;
+  abbreviation: string;
+}
+
 export interface VehicleInspection {
   id: string;
+  consecutiveNumber: number;
   placa: string;
   photos: VehiclePhoto[];
   observaciones: string;
@@ -34,6 +41,7 @@ export interface VehicleInspection {
     name: string;
     userId: string;
   };
+  department: string;
   timestamp: Date;
 }
 
@@ -43,6 +51,7 @@ export interface User {
   name: string;
   pin: string;
   isAdmin: boolean;
+  department?: string;
   createdAt: Date;
 }
 
@@ -63,3 +72,38 @@ export const PHOTO_LABELS: Record<PhotoType, string> = {
   llanta_p2: 'Foto Llanta P2',
   derecha: 'Foto Parte Derecha'
 };
+
+export const DEFAULT_DEPARTMENTS: Department[] = [
+  { id: '1', name: 'Amazonas', abbreviation: 'AMA' },
+  { id: '2', name: 'Antioquia', abbreviation: 'ANT' },
+  { id: '3', name: 'Arauca', abbreviation: 'ARA' },
+  { id: '4', name: 'Atlántico', abbreviation: 'ATL' },
+  { id: '5', name: 'Bolívar', abbreviation: 'BOL' },
+  { id: '6', name: 'Boyacá', abbreviation: 'BOY' },
+  { id: '7', name: 'Caldas', abbreviation: 'CAL' },
+  { id: '8', name: 'Caquetá', abbreviation: 'CAQ' },
+  { id: '9', name: 'Casanare', abbreviation: 'CAS' },
+  { id: '10', name: 'Cauca', abbreviation: 'CAU' },
+  { id: '11', name: 'Cesar', abbreviation: 'CES' },
+  { id: '12', name: 'Chocó', abbreviation: 'CHO' },
+  { id: '13', name: 'Córdoba', abbreviation: 'COR' },
+  { id: '14', name: 'Cundinamarca', abbreviation: 'CUN' },
+  { id: '15', name: 'Guainía', abbreviation: 'GUA' },
+  { id: '16', name: 'Guaviare', abbreviation: 'GUV' },
+  { id: '17', name: 'Huila', abbreviation: 'HUI' },
+  { id: '18', name: 'La Guajira', abbreviation: 'LAG' },
+  { id: '19', name: 'Magdalena', abbreviation: 'MAG' },
+  { id: '20', name: 'Meta', abbreviation: 'MET' },
+  { id: '21', name: 'Nariño', abbreviation: 'NAR' },
+  { id: '22', name: 'Norte de Santander', abbreviation: 'NSA' },
+  { id: '23', name: 'Putumayo', abbreviation: 'PUT' },
+  { id: '24', name: 'Quindío', abbreviation: 'QUI' },
+  { id: '25', name: 'Risaralda', abbreviation: 'RIS' },
+  { id: '26', name: 'San Andrés y Providencia', abbreviation: 'SAP' },
+  { id: '27', name: 'Santander', abbreviation: 'SAN' },
+  { id: '28', name: 'Sucre', abbreviation: 'SUC' },
+  { id: '29', name: 'Tolima', abbreviation: 'TOL' },
+  { id: '30', name: 'Valle del Cauca', abbreviation: 'VAL' },
+  { id: '31', name: 'Vaupés', abbreviation: 'VAU' },
+  { id: '32', name: 'Vichada', abbreviation: 'VIC' }
+];

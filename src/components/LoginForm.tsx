@@ -59,24 +59,28 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100 p-4">
-      <div className="w-full max-w-md">
-        <Card>
-          <CardHeader className="text-center">
-            <div className="localiza-gradient text-white p-4 rounded-lg mb-4 mx-auto w-16 h-16 flex items-center justify-center">
-              <span className="text-2xl font-bold">L</span>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-green-100 p-3">
+      <div className="w-full max-w-sm">
+        <Card className="border-green-200/50 shadow-2xl">
+          <CardHeader className="text-center pb-4">
+            <div className="mb-4 mx-auto">
+              <img 
+                src="/lovable-uploads/8a6198c5-9438-452d-9133-4cb2bd965c0d.png" 
+                alt="Localiza Logo" 
+                className="h-16 w-auto mx-auto mb-2"
+              />
             </div>
-            <CardTitle className="text-2xl font-bold text-green-800">
+            <CardTitle className="text-xl font-bold text-green-800">
               Alistamientos Localiza
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm">
               Inicia sesión con tu correo corporativo
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <CardContent className="px-4">
+            <form onSubmit={handleSubmit} className="space-y-3">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-xs font-medium text-gray-700 mb-1">
                   Correo Electrónico Corporativo
                 </label>
                 <Input
@@ -84,15 +88,15 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu.nombre@rentingcolombia.com"
+                  placeholder="nombre@rentingcolombia.com"
                   required
-                  className="w-full"
+                  className="w-full text-sm h-10"
                 />
               </div>
               
               {email !== 'admin@rentingcolombia.com' && (
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="name" className="block text-xs font-medium text-gray-700 mb-1">
                     Nombre Completo
                   </label>
                   <Input
@@ -102,27 +106,27 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ingresa tu nombre completo"
                     required
-                    className="w-full"
+                    className="w-full text-sm h-10"
                   />
                 </div>
               )}
 
               <Button
                 type="submit"
-                className="w-full localiza-gradient hover:opacity-90 transition-opacity"
+                className="w-full localiza-gradient hover:opacity-90 transition-opacity h-10 text-sm"
                 disabled={isLoading}
               >
                 {isLoading ? 'Iniciando sesión...' : 'Continuar'}
               </Button>
             </form>
             
-            <div className="mt-4 text-center text-sm text-gray-600">
+            <div className="mt-3 text-center text-xs text-gray-600">
               <p>Solo se permiten correos @rentingcolombia.com</p>
             </div>
           </CardContent>
         </Card>
         
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <p className="text-xs text-gray-500">
             Aplicación creada por<br />
             <span className="font-semibold text-green-700">Charly Hernando Avendaño</span><br />
