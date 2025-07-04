@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { Camera, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { PhotoType, PHOTO_LABELS } from '@/types/vehicle';
 
 interface PhotoCaptureProps {
@@ -17,7 +17,6 @@ const PhotoCapture = ({ photoType, onPhotoCapture, capturedPhoto }: PhotoCapture
     if (file) {
       onPhotoCapture(photoType, file);
     }
-    // Limpiar el input para permitir seleccionar la misma foto nuevamente
     event.target.value = '';
   };
 
@@ -30,21 +29,18 @@ const PhotoCapture = ({ photoType, onPhotoCapture, capturedPhoto }: PhotoCapture
       <button
         type="button"
         onClick={openCamera}
-        className={`photo-button w-full ${capturedPhoto ? 'photo-button-captured' : ''}`}
+        className={`w-full h-16 rounded-lg font-medium text-sm transition-all duration-200 ${
+          capturedPhoto 
+            ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white shadow-md' 
+            : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl'
+        } transform hover:scale-105`}
       >
-        {capturedPhoto ? (
-          <Check className="w-8 h-8 mb-2" />
-        ) : (
-          <Camera className="w-8 h-8 mb-2" />
-        )}
-        <span className="text-center text-sm leading-tight">
-          {PHOTO_LABELS[photoType]}
-        </span>
-        {capturedPhoto && (
-          <span className="text-xs opacity-90 mt-1">
-            ✓ Foto capturada
+        <div className="flex items-center justify-center space-x-2">
+          {capturedPhoto && <Check className="w-4 h-4" />}
+          <span className="text-center leading-tight">
+            {PHOTO_LABELS[photoType]}
           </span>
-        )}
+        </div>
       </button>
       
       <input

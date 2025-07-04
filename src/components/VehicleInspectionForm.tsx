@@ -7,14 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Save, Car, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import PhotoCapture from './PhotoCapture';
-import { PhotoType, VehicleInspection, PHOTO_LABELS } from '@/types/vehicle';
+import { PhotoType, VehicleInspection, PHOTO_LABELS, User } from '@/types/vehicle';
 
 interface VehicleInspectionFormProps {
   onInspectionSave: (inspection: Omit<VehicleInspection, 'id' | 'timestamp'>) => void;
-  user: {
-    email: string;
-    name: string;
-  };
+  user: User;
 }
 
 const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionFormProps) => {
@@ -25,46 +22,44 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
     frontal: null,
     panoramico: null,
     izquierda: null,
-    panoramico_interno: null,
-    interior_1: null,
-    interior_2: null,
-    interior_3: null,
-    interior_techo: null,
     llanta_p1: null,
-    llanta_p2: null,
-    trasera: null,
+    llanta_p3: null,
+    panoramico_interno: null,
+    interior_delantera: null,
+    interior_trasera: null,
+    interior_techo: null,
     kit_carretera: null,
     repuesto_gata: null,
-    derecha: null,
-    llanta_p3: null,
+    trasera: null,
     llanta_p4: null,
+    llanta_p2: null,
+    derecha: null,
   });
   const [photoUrls, setPhotoUrls] = useState<Record<PhotoType, string | null>>({
     frontal: null,
     panoramico: null,
     izquierda: null,
-    panoramico_interno: null,
-    interior_1: null,
-    interior_2: null,
-    interior_3: null,
-    interior_techo: null,
     llanta_p1: null,
-    llanta_p2: null,
-    trasera: null,
+    llanta_p3: null,
+    panoramico_interno: null,
+    interior_delantera: null,
+    interior_trasera: null,
+    interior_techo: null,
     kit_carretera: null,
     repuesto_gata: null,
-    derecha: null,
-    llanta_p3: null,
+    trasera: null,
     llanta_p4: null,
+    llanta_p2: null,
+    derecha: null,
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Orden específico solicitado por el usuario
   const photoTypes: PhotoType[] = [
-    'frontal', 'panoramico', 'izquierda', 'panoramico_interno',
-    'interior_1', 'interior_2', 'interior_3', 'interior_techo',
-    'llanta_p1', 'llanta_p2', 'trasera', 'kit_carretera',
-    'repuesto_gata', 'derecha', 'llanta_p3', 'llanta_p4'
+    'frontal', 'panoramico', 'izquierda', 'llanta_p1', 'llanta_p3',
+    'panoramico_interno', 'interior_delantera', 'interior_trasera', 'interior_techo',
+    'kit_carretera', 'repuesto_gata', 'trasera', 'llanta_p4', 'llanta_p2', 'derecha'
   ];
 
   const handlePhotoCapture = (photoType: PhotoType, file: File) => {
@@ -116,7 +111,11 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
         photos: vehiclePhotos,
         observaciones,
         fechaVencimientoExtintor: fechaVencimientoExtintor || undefined,
-        inspector: user
+        inspector: {
+          email: user.email,
+          name: user.name,
+          userId: user.id
+        }
       };
 
       onInspectionSave(inspection);
@@ -148,8 +147,8 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
   };
 
   return (
-    <div className="space-y-8">
-      <form onSubmit={handleSubmit} className="space-y-8">
+    <div className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <Card className="card-professional">
           <CardHeader>
             <CardTitle className="flex items-center space-x-3 text-green-800">
@@ -158,22 +157,20 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              <div>
-                <label htmlFor="placa" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Placa del Vehículo *
-                </label>
-                <Input
-                  id="placa"
-                  type="text"
-                  value={placa}
-                  onChange={(e) => setPlaca(e.target.value.toUpperCase())}
-                  placeholder="ABC123"
-                  className="uppercase text-lg font-semibold h-12 border-2 border-green-200 focus:border-green-500"
-                  maxLength={6}
-                  required
-                />
-              </div>
+            <div>
+              <label htmlFor="placa" className="block text-sm font-semibold text-gray-700 mb-2">
+                Placa del Vehículo *
+              </label>
+              <Input
+                id="placa"
+                type="text"
+                value={placa}
+                onChange={(e) => setPlaca(e.target.value.toUpperCase())}
+                placeholder="ABC123"
+                className="uppercase text-lg font-semibold h-12 border-2 border-green-200 focus:border-green-500"
+                maxLength={6}
+                required
+              />
             </div>
           </CardContent>
         </Card>
@@ -184,7 +181,7 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
             <p className="text-gray-600">Toca cada botón para abrir la cámara y capturar la foto correspondiente</p>
           </CardHeader>
           <CardContent>
-            <div className="photo-grid">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {photoTypes.map((photoType) => (
                 <PhotoCapture
                   key={photoType}
@@ -201,7 +198,7 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
           <CardHeader>
             <CardTitle className="flex items-center space-x-3 text-green-800">
               <Calendar className="w-6 h-6" />
-              <span>Información del Extintor</span>
+              <span>Fecha de Vencimiento del Extintor</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
