@@ -1,17 +1,15 @@
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
+// src/lib/firebase.ts
+import { initializeApp } from 'firebase/app';
 
+// Tu configuración de Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyAzcZgC5TpJEzz2xDpgYMJp3yCJjzRcA",
-  authDomain: "localiza-alistamientos-6a6b9.firebaseapp.com",
-  projectId: "localiza-alistamientos-6a6b9",
-  storageBucket: "localiza-alistamientos-6a6b9.appspot.com",
-  messagingSenderId: "504938867763",
-  appId: "1:504938867763:web:bd4b8e2fd7f9a70ebfc746"
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_AUTH_DOMAIN",
+  projectId: "TU_PROJECT_ID",
+  storageBucket: "TU_STORAGE_BUCKET",
+  messagingSenderId: "TU_MESSAGING_SENDER_ID",
+  appId: "TU_APP_ID"
 };
 
-const app = initializeApp(firebaseConfig);
-
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+// Inicializa Firebase
+export const firebaseApp = initializeApp(firebaseConfig);
