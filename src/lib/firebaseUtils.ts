@@ -1,4 +1,5 @@
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getStorage } from "firebase/storage";
+
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import { firebaseApp } from './firebase'; // Asegúrate de tener firebase.ts bien configurado
 import { PhotoType, VehicleInspection } from '@/types/vehicle'; // Ajusta si tu ruta es diferente
