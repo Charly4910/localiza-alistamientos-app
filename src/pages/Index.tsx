@@ -8,7 +8,7 @@ import VehicleInspectionForm from '@/components/VehicleInspectionForm';
 import InspectionHistory from '@/components/InspectionHistory';
 import AdminPanel from '@/components/AdminPanel';
 import LoadingOverlay from '@/components/LoadingOverlay';
-import { VehicleInspection, User, DEFAULT_DEPARTMENTS } from '@/types/vehicle';
+import { VehicleInspection, User, DEFAULT_AGENCIES, Agency } from '@/types/vehicle';
 
 const Index = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -20,6 +20,7 @@ const Index = () => {
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [consecutiveCounter, setConsecutiveCounter] = useState(1);
+  const [agencies, setAgencies] = useState<Agency[]>(DEFAULT_AGENCIES);
 
   // Tema oscuro
   useEffect(() => {
@@ -51,6 +52,7 @@ const Index = () => {
     const savedUsers = localStorage.getItem('localiza_users');
     const savedInspections = localStorage.getItem('localiza_inspections');
     const savedCounter = localStorage.getItem('localiza_consecutive_counter');
+    const savedAgencies = localStorage.getItem('localiza_agencies');
     
     if (savedUser) {
       setCurrentUser(JSON.parse(savedUser));
@@ -80,6 +82,10 @@ const Index = () => {
 
     if (savedCounter) {
       setConsecutiveCounter(parseInt(savedCounter));
+    }
+
+    if (savedAgencies) {
+      setAgencies(JSON.parse(savedAgencies));
     }
   }, []);
 
@@ -182,6 +188,15 @@ const Index = () => {
     }, 1500);
   };
 
+  const handleUpdateAgencies = (updatedAgencies: Agency[]) => {
+    showLoading('Actualizando agencias...', 1500);
+    
+    setTimeout(() => {
+      setAgencies(updatedAgencies);
+      localStorage.setItem('localiza_agencies', JSON.stringify(updatedAgencies));
+    }, 1500);
+  };
+
   if (!currentUser) {
     if (loginStep === 'register' && tempLoginData) {
       return (
@@ -191,7 +206,7 @@ const Index = () => {
             name={tempLoginData.name}
             onUserRegistered={handleUserRegistered}
             existingUsers={users}
-            departments={DEFAULT_DEPARTMENTS}
+            agencies={agencies}
           />
           <LoadingOverlay isVisible={loading} message={loadingMessage} />
         </>
@@ -287,7 +302,9 @@ const Index = () => {
               <AdminPanel 
                 users={users} 
                 inspections={inspections}
-                onUpdateUsers={handleUpdateUsers} 
+                onUpdateUsers={handleUpdateUsers}
+                agencies={agencies}
+                onUpdateAgencies={handleUpdateAgencies}
               />
             </TabsContent>
           )}

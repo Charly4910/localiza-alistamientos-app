@@ -10,7 +10,7 @@ import PhotoCapture from './PhotoCapture';
 import { PhotoType, VehicleInspection, PHOTO_LABELS, User } from '@/types/vehicle';
 
 interface VehicleInspectionFormProps {
-  onInspectionSave: (inspection: Omit<VehicleInspection, 'id' | 'timestamp'>) => void;
+  onInspectionSave: (inspection: Omit<VehicleInspection, 'id' | 'timestamp' | 'consecutiveNumber'>) => void;
   user: User;
 }
 
@@ -106,7 +106,7 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
         timestamp: new Date()
       }));
 
-      const inspection: Omit<VehicleInspection, 'id' | 'timestamp'> = {
+      const inspection: Omit<VehicleInspection, 'id' | 'timestamp' | 'consecutiveNumber'> = {
         placa: placa.toUpperCase(),
         photos: vehiclePhotos,
         observaciones,
@@ -115,7 +115,8 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
           email: user.email,
           name: user.name,
           userId: user.id
-        }
+        },
+        department: user.department || 'No asignada'
       };
 
       onInspectionSave(inspection);

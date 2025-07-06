@@ -5,20 +5,20 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { User, Department, DEFAULT_DEPARTMENTS } from '@/types/vehicle';
+import { User, Agency, DEFAULT_AGENCIES } from '@/types/vehicle';
 
 interface UserRegistrationProps {
   email: string;
   name: string;
   onUserRegistered: (user: User) => void;
   existingUsers: User[];
-  departments?: Department[];
+  agencies?: Agency[];
 }
 
-const UserRegistration = ({ email, name, onUserRegistered, existingUsers, departments = DEFAULT_DEPARTMENTS }: UserRegistrationProps) => {
+const UserRegistration = ({ email, name, onUserRegistered, existingUsers, agencies = DEFAULT_AGENCIES }: UserRegistrationProps) => {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedAgency, setSelectedAgency] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -43,10 +43,10 @@ const UserRegistration = ({ email, name, onUserRegistered, existingUsers, depart
       return;
     }
 
-    if (!selectedDepartment) {
+    if (!selectedAgency) {
       toast({
-        title: "Departamento requerido",
-        description: "Por favor selecciona tu departamento",
+        title: "Agencia requerida",
+        description: "Por favor selecciona tu agencia",
         variant: "destructive",
       });
       return;
@@ -70,7 +70,7 @@ const UserRegistration = ({ email, name, onUserRegistered, existingUsers, depart
       name,
       pin,
       isAdmin: false,
-      department: selectedDepartment,
+      department: selectedAgency,
       createdAt: new Date()
     };
 
@@ -105,17 +105,17 @@ const UserRegistration = ({ email, name, onUserRegistered, existingUsers, depart
         <CardContent className="px-4">
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label htmlFor="department" className="block text-xs font-medium text-gray-700 mb-1">
-                Departamento
+              <label htmlFor="agency" className="block text-xs font-medium text-gray-700 mb-1">
+                Agencia
               </label>
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment} required>
+              <Select value={selectedAgency} onValueChange={setSelectedAgency} required>
                 <SelectTrigger className="text-sm h-10">
-                  <SelectValue placeholder="Selecciona tu departamento" />
+                  <SelectValue placeholder="Selecciona tu agencia" />
                 </SelectTrigger>
                 <SelectContent className="max-h-48">
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.name} className="text-sm">
-                      {dept.name} ({dept.abbreviation})
+                  {agencies.map((agency) => (
+                    <SelectItem key={agency.id} value={agency.name} className="text-sm">
+                      {agency.name} ({agency.abbreviation})
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -23,7 +23,7 @@ export type PhotoType =
   | 'llanta_p2'
   | 'derecha';
 
-export interface Department {
+export interface Agency {
   id: string;
   name: string;
   abbreviation: string;
@@ -73,7 +73,7 @@ export const PHOTO_LABELS: Record<PhotoType, string> = {
   derecha: 'Foto Parte Derecha'
 };
 
-export const DEFAULT_DEPARTMENTS: Department[] = [
+export const DEFAULT_AGENCIES: Agency[] = [
   { id: '1', name: 'Amazonas', abbreviation: 'AMA' },
   { id: '2', name: 'Antioquia', abbreviation: 'ANT' },
   { id: '3', name: 'Arauca', abbreviation: 'ARA' },

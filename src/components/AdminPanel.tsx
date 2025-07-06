@@ -4,21 +4,22 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Trash2, Edit, User, Key, FileText, Calendar } from 'lucide-react';
-import { User as UserType, VehicleInspection, Department, DEFAULT_DEPARTMENTS } from '@/types/vehicle';
+import { User as UserType, VehicleInspection, Agency, DEFAULT_AGENCIES } from '@/types/vehicle';
 import { useToast } from '@/hooks/use-toast';
 
 interface AdminPanelProps {
   users: UserType[];
   inspections: VehicleInspection[];
   onUpdateUsers: (users: UserType[]) => void;
+  agencies: Agency[];
+  onUpdateAgencies: (agencies: Agency[]) => void;
 }
 
-const AdminPanel = ({ users, inspections, onUpdateUsers }: AdminPanelProps) => {
+const AdminPanel = ({ users, inspections, onUpdateUsers, agencies, onUpdateAgencies }: AdminPanelProps) => {
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [newPin, setNewPin] = useState('');
-  const [departments, setDepartments] = useState(DEFAULT_DEPARTMENTS);
-  const [newDepartment, setNewDepartment] = useState({ name: '', abbreviation: '' });
-  const [editingDepartment, setEditingDepartment] = useState<string | null>(null);
+  const [newAgency, setNewAgency] = useState({ name: '', abbreviation: '' });
+  const [editingAgency, setEditingAgency] = useState<string | null>(null);
   const { toast } = useToast();
 
   const formatDate = (date: Date) => {
@@ -106,8 +107,8 @@ const AdminPanel = ({ users, inspections, onUpdateUsers }: AdminPanelProps) => {
     });
   };
 
-  const handleAddDepartment = () => {
-    if (!newDepartment.name.trim() || !newDepartment.abbreviation.trim()) {
+  const handleAddAgency = () => {
+    if (!newAgency.name.trim() || !newAgency.abbreviation.trim()) {
       toast({
         title: "Campos requeridos",
         description: "Complete el nombre y la abreviatura",
@@ -116,27 +117,71 @@ const AdminPanel = ({ users, inspections, onUpdateUsers }: AdminPanelProps) => {
       return;
     }
 
-    if (departments.some(d => d.abbreviation === newDepartment.abbreviation.toUpperCase())) {
+    if (agencies.some(a => a.abbreviation === newAgency.abbreviation.toUpperCase())) {
       toast({
         title: "Abreviatura existe",
-        description: "Ya existe un departamento con esa abreviatura",
+        description: "Ya existe una agencia con esa abreviatura",
         variant: "destructive",
       });
       return;
     }
 
-    const newDept: Department = {
-      id: `dept_${Date.now()}`,
-      name: newDepartment.name.trim(),
-      abbreviation: newDepartment.abbreviation.toUpperCase().trim()
+    const newAgc: Agency = {
+      id: `agency_${Date.now()}`,
+      name: newAgency.name.trim(),
+      abbreviation: newAgency.abbreviation.toUpperCase().trim()
     };
 
-    setDepartments([...departments, newDept]);
-    setNewDepartment({ name: '', abbreviation: '' });
+    const updatedAgencies = [...agencies, newAgc];
+    onUpdateAgencies(updatedAgencies);
+    setNewAgency({ name: '', abbreviation: '' });
     
     toast({
-      title: "Departamento agregado",
-      description: "El departamento ha sido creado exitosamente",
+      title: "Agencia agregada",
+      description: "La agencia ha sido creada exitosamente",
+    });
+  };
+
+  const handleDeleteAgency = (agencyId: string) => {
+    const updatedAgencies = agencies.filter(agency => agency.id !== agencyId);
+    onUpdateAgencies(updatedAgencies);
+    toast({
+      title: "Agencia eliminada",
+      description: "La agencia ha sido eliminada exitosamente",
+    });
+  };
+
+  const handleEditAgency = (agencyId: string, name: string, abbreviation: string) => {
+    if (!name.trim() || !abbreviation.trim()) {
+      toast({
+        title: "Campos requeridos",
+        description: "Complete el nombre y la abreviatura",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (agencies.some(a => a.id !== agencyId && a.abbreviation === abbreviation.toUpperCase())) {
+      toast({
+        title: "Abreviatura existe",
+        description: "Ya existe una agencia con esa abreviatura",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const updatedAgencies = agencies.map(agency => 
+      agency.id === agencyId 
+        ? { ...agency, name: name.trim(), abbreviation: abbreviation.toUpperCase().trim() }
+        : agency
+    );
+    
+    onUpdateAgencies(updatedAgencies);
+    setEditingAgency(null);
+    
+    toast({
+      title: "Agencia actualizada",
+      description: "Los datos de la agencia han sido actualizados",
     });
   };
 
@@ -157,7 +202,7 @@ const AdminPanel = ({ users, inspections, onUpdateUsers }: AdminPanelProps) => {
         <TabsList className="grid w-full grid-cols-3 h-10">
           <TabsTrigger value="users" className="text-xs">Usuarios ({regularUsers.length})</TabsTrigger>
           <TabsTrigger value="inspections" className="text-xs">Alistamientos ({inspections.length})</TabsTrigger>
-          <TabsTrigger value="departments" className="text-xs">Departamentos</TabsTrigger>
+          <TabsTrigger value="agencies" className="text-xs">Agencias ({agencies.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-3">
@@ -184,8 +229,8 @@ const AdminPanel = ({ users, inspections, onUpdateUsers }: AdminPanelProps) => {
                             )}
                           </div>
                           <p className="text-xs text-gray-600 dark:text-gray-300">{user.email}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Departamento: {user.department || 'No asignado'}
+                           <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Agencia: {user.department || 'No asignada'}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">
                             Registrado: {formatDate(user.createdAt)}
@@ -301,8 +346,8 @@ const AdminPanel = ({ users, inspections, onUpdateUsers }: AdminPanelProps) => {
                           <p className="text-xs text-gray-600 dark:text-gray-300 truncate">
                             Inspector: {inspection.inspector.name}
                           </p>
-                          <p className="text-xs text-gray-600 dark:text-gray-300">
-                            Departamento: {inspection.department}
+                           <p className="text-xs text-gray-600 dark:text-gray-300">
+                            Agencia: {inspection.department}
                           </p>
                           <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
                             <Calendar className="w-3 h-3 flex-shrink-0" />
@@ -335,43 +380,97 @@ const AdminPanel = ({ users, inspections, onUpdateUsers }: AdminPanelProps) => {
           )}
         </TabsContent>
 
-        <TabsContent value="departments" className="space-y-3">
+        <TabsContent value="agencies" className="space-y-3">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Agregar Departamento</CardTitle>
+              <CardTitle className="text-sm">Agregar Agencia</CardTitle>
             </CardHeader>
             <CardContent className="p-3 pt-0">
               <div className="space-y-2">
                 <Input
-                  placeholder="Nombre del departamento"
-                  value={newDepartment.name}
-                  onChange={(e) => setNewDepartment({ ...newDepartment, name: e.target.value })}
+                  placeholder="Nombre completo de la agencia"
+                  value={newAgency.name}
+                  onChange={(e) => setNewAgency({ ...newAgency, name: e.target.value })}
                   className="text-sm h-8"
                 />
                 <Input
                   placeholder="Abreviatura (ej: BOG)"
-                  value={newDepartment.abbreviation}
-                  onChange={(e) => setNewDepartment({ ...newDepartment, abbreviation: e.target.value.toUpperCase() })}
+                  value={newAgency.abbreviation}
+                  onChange={(e) => setNewAgency({ ...newAgency, abbreviation: e.target.value.toUpperCase() })}
                   maxLength={5}
                   className="text-sm h-8"
                 />
-                <Button onClick={handleAddDepartment} className="w-full text-xs h-8">
-                  Agregar Departamento
+                <Button onClick={handleAddAgency} className="w-full text-xs h-8">
+                  Agregar Agencia
                 </Button>
               </div>
             </CardContent>
           </Card>
 
           <div className="space-y-2">
-            {departments.map((dept) => (
-              <Card key={dept.id} className="border-green-200 dark:border-green-800">
+            {agencies.map((agency) => (
+              <Card key={agency.id} className="border-green-200 dark:border-green-800">
                 <CardContent className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-sm">{dept.name}</h3>
-                      <p className="text-xs text-gray-500">Abreviatura: {dept.abbreviation}</p>
+                  {editingAgency === agency.id ? (
+                    <div className="space-y-2">
+                      <Input
+                        defaultValue={agency.name}
+                        onBlur={(e) => {
+                          const name = e.target.value;
+                          const abbreviation = agency.abbreviation;
+                          handleEditAgency(agency.id, name, abbreviation);
+                        }}
+                        className="text-sm h-8"
+                        placeholder="Nombre de la agencia"
+                      />
+                      <Input
+                        defaultValue={agency.abbreviation}
+                        onBlur={(e) => {
+                          const abbreviation = e.target.value;
+                          const name = agency.name;
+                          handleEditAgency(agency.id, name, abbreviation);
+                        }}
+                        maxLength={5}
+                        className="text-sm h-8"
+                        placeholder="Abreviatura"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => setEditingAgency(null)}
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-6"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium text-sm">{agency.name}</h3>
+                        <p className="text-xs text-gray-500">Abreviatura: {agency.abbreviation}</p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          onClick={() => setEditingAgency(agency.id)}
+                          variant="outline"
+                          size="sm"
+                          className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-600 dark:text-blue-400 text-xs h-6 px-2"
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          onClick={() => handleDeleteAgency(agency.id)}
+                          variant="outline"
+                          size="sm"
+                          className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-600 dark:text-red-400 text-xs h-6 px-2"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
