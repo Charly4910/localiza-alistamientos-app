@@ -9,13 +9,145 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      agencies: {
+        Row: {
+          abbreviation: string
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          abbreviation: string
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          abbreviation?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          department: string | null
+          email: string
+          id: string
+          is_admin: boolean | null
+          name: string
+          pin: string
+        }
+        Insert: {
+          created_at?: string | null
+          department?: string | null
+          email: string
+          id: string
+          is_admin?: boolean | null
+          name: string
+          pin: string
+        }
+        Update: {
+          created_at?: string | null
+          department?: string | null
+          email?: string
+          id?: string
+          is_admin?: boolean | null
+          name?: string
+          pin?: string
+        }
+        Relationships: []
+      }
+      vehicle_inspections: {
+        Row: {
+          consecutive_number: number
+          created_at: string | null
+          department: string
+          fecha_vencimiento_extintor: string | null
+          id: string
+          inspector_email: string
+          inspector_id: string | null
+          inspector_name: string
+          observaciones: string | null
+          placa: string
+        }
+        Insert: {
+          consecutive_number: number
+          created_at?: string | null
+          department: string
+          fecha_vencimiento_extintor?: string | null
+          id?: string
+          inspector_email: string
+          inspector_id?: string | null
+          inspector_name: string
+          observaciones?: string | null
+          placa: string
+        }
+        Update: {
+          consecutive_number?: number
+          created_at?: string | null
+          department?: string
+          fecha_vencimiento_extintor?: string | null
+          id?: string
+          inspector_email?: string
+          inspector_id?: string | null
+          inspector_name?: string
+          observaciones?: string | null
+          placa?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_inspections_inspector_id_fkey"
+            columns: ["inspector_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_photos: {
+        Row: {
+          created_at: string | null
+          file_path: string
+          id: string
+          inspection_id: string | null
+          photo_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_path: string
+          id?: string
+          inspection_id?: string | null
+          photo_type: string
+        }
+        Update: {
+          created_at?: string | null
+          file_path?: string
+          id?: string
+          inspection_id?: string | null
+          photo_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_photos_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_next_consecutive_number: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never
