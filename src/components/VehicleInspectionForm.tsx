@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +8,6 @@ import { Save, Car, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import PhotoCapture from './PhotoCapture';
 import { PhotoType, VehicleInspection, PHOTO_LABELS, User } from '@/types/vehicle';
-import { uploadPhotoToFirebase, saveInspectionToFirestore } from '@/lib/firebaseUtils';
 
 interface VehicleInspectionFormProps {
   onInspectionSave: (inspection: Omit<VehicleInspection, 'id' | 'timestamp' | 'consecutiveNumber'>) => void;
@@ -55,6 +55,7 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Orden específico solicitado por el usuario
   const photoTypes: PhotoType[] = [
     'frontal', 'panoramico', 'izquierda', 'llanta_p1', 'llanta_p3',
     'panoramico_interno', 'interior_delantera', 'interior_trasera', 'interior_techo',
@@ -65,7 +66,7 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
     const url = URL.createObjectURL(file);
     setPhotos(prev => ({ ...prev, [photoType]: file }));
     setPhotoUrls(prev => ({ ...prev, [photoType]: url }));
-
+    
     toast({
       title: "Foto capturada",
       description: `${PHOTO_LABELS[photoType]} guardada exitosamente`,
@@ -74,7 +75,7 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (!placa.trim()) {
       toast({
         title: "Campo requerido",
@@ -85,7 +86,7 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
     }
 
     const capturedPhotos = Object.entries(photos).filter(([_, file]) => file !== null);
-
+    
     if (capturedPhotos.length === 0) {
       toast({
         title: "Fotos requeridas",
@@ -98,21 +99,12 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
     setIsLoading(true);
 
     try {
-      const vehiclePhotos = await Promise.all(
-        capturedPhotos.map(async ([type, file]) => {
-          const url = await uploadPhotoToFirebase(
-            file as File,
-            placa.toUpperCase(),
-            type
-          );
-          return {
-            id: `${Date.now()}-${type}`,
-            type: type as PhotoType,
-            url,
-            timestamp: new Date(),
-          };
-        })
-      );
+      const vehiclePhotos = capturedPhotos.map(([type, file]) => ({
+        id: `${Date.now()}-${type}`,
+        type: type as PhotoType,
+        url: photoUrls[type as PhotoType]!,
+        timestamp: new Date()
+      }));
 
       const inspection: Omit<VehicleInspection, 'id' | 'timestamp' | 'consecutiveNumber'> = {
         placa: placa.toUpperCase(),
@@ -122,17 +114,10 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
         inspector: {
           email: user.email,
           name: user.name,
-          userId: user.id,
+          userId: user.id
         },
-        department: user.department || 'No asignada',
+        department: user.department || 'No asignada'
       };
-
-      await saveInspectionToFirestore({
-        ...inspection,
-        id: `inspection_${Date.now()}`,
-        timestamp: new Date(),
-        consecutiveNumber: 0, // Puedes ajustar este número si manejas consecutivos
-      });
 
       onInspectionSave(inspection);
 
@@ -152,7 +137,6 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
       setPhotoUrls(Object.fromEntries(photoTypes.map(type => [type, null])) as Record<PhotoType, string | null>);
 
     } catch (error) {
-      console.error(error);
       toast({
         title: "Error",
         description: "Hubo un problema al guardar el alistamiento",
