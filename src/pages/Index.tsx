@@ -12,7 +12,6 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 const Index = () => {
   const { user, profile, loading: authLoading, signOut } = useAuth();
-  const { inspections, agencies, loading: dataLoading, saveInspection } = useSupabaseData();
   const [darkMode, setDarkMode] = useState(false);
 
   const toggleDarkMode = () => {
@@ -26,25 +25,6 @@ const Index = () => {
     }
   };
 
-  const handleInspectionSave = async (inspectionData: any) => {
-    if (!profile) {
-      console.error('No profile available for inspection save');
-      return;
-    }
-    
-    const fullInspectionData = {
-      ...inspectionData,
-      inspector: {
-        email: profile.email,
-        name: profile.name,
-        userId: profile.id
-      },
-      department: profile.department || 'No asignada'
-    };
-
-    await saveInspection(fullInspectionData);
-  };
-
   // Show loading while auth is being determined
   if (authLoading) {
     console.log('Auth loading...');
@@ -54,7 +34,7 @@ const Index = () => {
   // Show auth form if not authenticated
   if (!user || !profile) {
     console.log('No user or profile, showing auth form');
-    return <AuthForm agencies={agencies} onAuthSuccess={() => {}} />;
+    return <AuthenticatedContent />;
   }
 
   console.log('Rendering main app for user:', profile.email);
@@ -69,10 +49,41 @@ const Index = () => {
     createdAt: new Date(profile.created_at)
   };
 
+  return <MainApp user={currentUser} signOut={signOut} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />;
+};
+
+const AuthenticatedContent = () => {
+  const { agencies } = useSupabaseData();
+  
+  return <AuthForm agencies={agencies} onAuthSuccess={() => {}} />;
+};
+
+const MainApp = ({ user, signOut, darkMode, toggleDarkMode }: any) => {
+  const { inspections, agencies, loading: dataLoading, saveInspection } = useSupabaseData();
+
+  const handleInspectionSave = async (inspectionData: any) => {
+    if (!user) {
+      console.error('No user available for inspection save');
+      return;
+    }
+    
+    const fullInspectionData = {
+      ...inspectionData,
+      inspector: {
+        email: user.email,
+        name: user.name,
+        userId: user.id
+      },
+      department: user.department || 'No asignada'
+    };
+
+    await saveInspection(fullInspectionData);
+  };
+
   return (
     <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-gray-900' : 'bg-gradient-to-br from-green-50 to-green-100'}`}>
       <Header 
-        user={currentUser} 
+        user={user} 
         onLogout={signOut} 
         darkMode={darkMode}
         toggleDarkMode={toggleDarkMode}
@@ -81,9 +92,9 @@ const Index = () => {
       <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
         {dataLoading && <LoadingOverlay isVisible={true} message="Cargando datos..." />}
         
-        <Tabs defaultValue={currentUser.isAdmin ? "admin" : "nuevo"} className="space-y-4 sm:space-y-6">
-          <TabsList className={`grid w-full max-w-2xl mx-auto h-10 ${currentUser.isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            {!currentUser.isAdmin && (
+        <Tabs defaultValue={user.isAdmin ? "admin" : "nuevo"} className="space-y-4 sm:space-y-6">
+          <TabsList className={`grid w-full max-w-2xl mx-auto h-10 ${user.isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {!user.isAdmin && (
               <TabsTrigger value="nuevo" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-xs sm:text-sm">
                 Nuevo Alistamiento
               </TabsTrigger>
@@ -91,14 +102,14 @@ const Index = () => {
             <TabsTrigger value="historial" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-xs sm:text-sm">
               Historial
             </TabsTrigger>
-            {currentUser.isAdmin && (
+            {user.isAdmin && (
               <TabsTrigger value="admin" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-xs sm:text-sm">
                 Administración
               </TabsTrigger>
             )}
           </TabsList>
 
-          {!currentUser.isAdmin && (
+          {!user.isAdmin && (
             <TabsContent value="nuevo" className="space-y-4 sm:space-y-6">
               <div className="text-center mb-4 sm:mb-6">
                 <h2 className="text-xl sm:text-3xl font-bold text-green-800 dark:text-green-400 mb-2">
@@ -108,7 +119,7 @@ const Index = () => {
                   Documenta el estado del vehículo con fotos detalladas
                 </p>
               </div>
-              <VehicleInspectionForm onInspectionSave={handleInspectionSave} user={currentUser} />
+              <VehicleInspectionForm onInspectionSave={handleInspectionSave} user={user} />
             </TabsContent>
           )}
 
@@ -124,7 +135,7 @@ const Index = () => {
             <InspectionHistory inspections={inspections} />
           </TabsContent>
 
-          {currentUser.isAdmin && (
+          {user.isAdmin && (
             <TabsContent value="admin" className="space-y-4 sm:space-y-6">
               <div className="text-center mb-4 sm:mb-6">
                 <h2 className="text-xl sm:text-3xl font-bold text-green-800 dark:text-green-400 mb-2">

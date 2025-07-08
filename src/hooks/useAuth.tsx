@@ -22,11 +22,11 @@ export const useAuth = () => {
   useEffect(() => {
     console.log('Auth hook initializing...');
     
-    let isMounted = true;
-
     const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
       try {
         console.log('Fetching profile for user:', userId);
+        
+        // Simple direct query without complex RLS
         const { data: profileData, error } = await supabase
           .from('profiles')
           .select('*')
@@ -38,10 +38,10 @@ export const useAuth = () => {
           return null;
         }
         
-        console.log('Profile fetched:', profileData);
+        console.log('Profile fetched successfully:', profileData);
         return profileData;
       } catch (error) {
-        console.error('Error in fetchProfile:', error);
+        console.error('Exception in fetchProfile:', error);
         return null;
       }
     };
@@ -49,25 +49,17 @@ export const useAuth = () => {
     const handleAuthStateChange = async (event: string, session: Session | null) => {
       console.log('Auth state changed:', event, session?.user?.email);
       
-      if (!isMounted) return;
-      
       setSession(session);
       setUser(session?.user ?? null);
       
       if (session?.user) {
         const profileData = await fetchProfile(session.user.id);
-        if (isMounted) {
-          setProfile(profileData);
-        }
+        setProfile(profileData);
       } else {
-        if (isMounted) {
-          setProfile(null);
-        }
+        setProfile(null);
       }
       
-      if (isMounted) {
-        setLoading(false);
-      }
+      setLoading(false);
     };
 
     // Set up auth state listener
@@ -77,29 +69,17 @@ export const useAuth = () => {
     const initAuth = async () => {
       try {
         console.log('Checking existing session...');
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error getting session:', error);
-          if (isMounted) {
-            setLoading(false);
-          }
-          return;
-        }
-        
+        const { data: { session } } = await supabase.auth.getSession();
         await handleAuthStateChange('INITIAL_SESSION', session);
       } catch (error) {
         console.error('Error in initAuth:', error);
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
     initAuth();
 
     return () => {
-      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);

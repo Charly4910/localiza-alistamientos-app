@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,38 +27,22 @@ const AuthForm = ({ agencies, onAuthSuccess }: AuthFormProps) => {
   useEffect(() => {
     const createAdminIfNotExists = async () => {
       try {
-        // Check if admin profile exists
-        const { data: adminProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('email', 'admin@rentingcolombia.com')
-          .single();
-
-        if (!adminProfile) {
-          console.log('Admin profile not found, attempting to create admin user...');
-          
-          // Try to sign up admin user
-          const { error: signUpError } = await supabase.auth.signUp({
-            email: 'admin@rentingcolombia.com',
-            password: 'admin2026',
-            options: {
-              data: {
-                name: 'Administrador',
-                pin: '2026',
-                is_admin: true,
-                department: 'Administración'
-              }
+        // Try to sign up admin user (will fail silently if already exists)
+        await supabase.auth.signUp({
+          email: 'admin@rentingcolombia.com',
+          password: 'admin2026',
+          options: {
+            data: {
+              name: 'Administrador',
+              pin: '2026',
+              is_admin: true,
+              department: 'Administración'
             }
-          });
-
-          if (signUpError) {
-            console.log('Admin user might already exist in auth.users');
-          } else {
-            console.log('Admin user created successfully');
           }
-        }
+        });
       } catch (error) {
-        console.log('Error checking/creating admin:', error);
+        // Admin might already exist, that's ok
+        console.log('Admin setup attempt completed');
       }
     };
 
@@ -91,6 +74,7 @@ const AuthForm = ({ agencies, onAuthSuccess }: AuthFormProps) => {
           title: "Inicio de sesión exitoso",
           description: "Bienvenido de vuelta",
         });
+        onAuthSuccess();
       }
     } catch (error) {
       console.error('Login exception:', error);

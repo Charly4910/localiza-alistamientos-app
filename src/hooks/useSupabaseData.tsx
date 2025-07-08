@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { VehicleInspection, Agency } from '@/types/vehicle';
@@ -174,6 +173,8 @@ export const useSupabaseData = () => {
   };
 
   const loadData = async () => {
+    if (loading) return; // Prevent multiple simultaneous loads
+    
     try {
       console.log('Loading data...');
       setLoading(true);
