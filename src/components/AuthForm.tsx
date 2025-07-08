@@ -26,75 +26,69 @@ const AuthForm = ({ agencies, onAuthSuccess }: AuthFormProps) => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    if (email === 'admin@rentingcolombia.com' && password === 'admin2026') {
-      // Admin login
-      const { error } = await supabase.auth.signInWithPassword({
-        email: 'admin@rentingcolombia.com',
-        password: 'admin2026'
+    console.log('Attempting login for:', email);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
 
       if (error) {
+        console.error('Login error:', error);
+        
         // If admin doesn't exist, create it
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: 'admin@rentingcolombia.com',
-          password: 'admin2026',
-          options: {
-            data: {
-              name: 'Administrador',
-              pin: '2026',
-              is_admin: true,
-              department: 'Administración'
+        if (email === 'admin@rentingcolombia.com' && password === 'admin2026') {
+          console.log('Creating admin user...');
+          const { error: signUpError } = await supabase.auth.signUp({
+            email: 'admin@rentingcolombia.com',
+            password: 'admin2026',
+            options: {
+              data: {
+                name: 'Administrador',
+                pin: '2026',
+                is_admin: true,
+                department: 'Administración'
+              }
             }
-          }
-        });
+          });
 
-        if (signUpError) {
+          if (signUpError) {
+            console.error('Admin creation error:', signUpError);
+            toast({
+              title: "Error de autenticación",
+              description: "No se pudo crear el usuario administrador",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Administrador creado",
+              description: "El usuario administrador ha sido creado. Puedes iniciar sesión ahora.",
+            });
+          }
+        } else {
           toast({
-            title: "Error de autenticación",
-            description: signUpError.message,
+            title: "Error de inicio de sesión",
+            description: "Email o contraseña incorrectos",
             variant: "destructive",
           });
-          return;
         }
+      } else {
+        console.log('Login successful for:', data.user?.email);
+        toast({
+          title: "Inicio de sesión exitoso",
+          description: "Bienvenido de vuelta",
+        });
       }
-
+    } catch (error) {
+      console.error('Login exception:', error);
       toast({
-        title: "Bienvenido Administrador",
-        description: "Has iniciado sesión exitosamente",
-      });
-      onAuthSuccess();
-      return;
-    }
-
-    if (!email.endsWith('@rentingcolombia.com')) {
-      toast({
-        title: "Error de autenticación",
-        description: "Solo se permiten correos corporativos @rentingcolombia.com",
+        title: "Error",
+        description: "Hubo un problema al iniciar sesión",
         variant: "destructive",
       });
-      return;
-    }
-
-    setIsLoading(true);
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) {
-      toast({
-        title: "Error de inicio de sesión",
-        description: "Email o contraseña incorrectos",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Inicio de sesión exitoso",
-        description: "Bienvenido de vuelta",
-      });
-      onAuthSuccess();
     }
 
     setIsLoading(false);
@@ -132,31 +126,41 @@ const AuthForm = ({ agencies, onAuthSuccess }: AuthFormProps) => {
 
     setIsLoading(true);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          pin,
-          is_admin: false,
-          department
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            pin,
+            is_admin: false,
+            department
+          }
         }
-      }
-    });
+      });
 
-    if (error) {
+      if (error) {
+        console.error('Signup error:', error);
+        toast({
+          title: "Error de registro",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Registro exitoso",
+          description: "Tu cuenta ha sido creada. Puedes iniciar sesión ahora.",
+        });
+        setActiveTab('login');
+      }
+    } catch (error) {
+      console.error('Signup exception:', error);
       toast({
-        title: "Error de registro",
-        description: error.message,
+        title: "Error",
+        description: "Hubo un problema al registrar la cuenta",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Registro exitoso",
-        description: "Tu cuenta ha sido creada. Puedes iniciar sesión ahora.",
-      });
-      setActiveTab('login');
     }
 
     setIsLoading(false);
@@ -176,6 +180,9 @@ const AuthForm = ({ agencies, onAuthSuccess }: AuthFormProps) => {
           <CardTitle className="text-2xl font-bold text-green-800">
             Alistamientos Localiza
           </CardTitle>
+          <p className="text-sm text-gray-600 mt-2">
+            Admin: admin@rentingcolombia.com / PIN: admin2026
+          </p>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -201,7 +208,7 @@ const AuthForm = ({ agencies, onAuthSuccess }: AuthFormProps) => {
                 </div>
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                    Contraseña (PIN de 4 dígitos)
+                    Contraseña
                   </label>
                   <Input
                     id="password"
@@ -214,7 +221,7 @@ const AuthForm = ({ agencies, onAuthSuccess }: AuthFormProps) => {
                 </div>
                 <Button
                   type="submit"
-                  className="w-full localiza-gradient"
+                  className="w-full bg-green-600 hover:bg-green-700"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
@@ -296,7 +303,7 @@ const AuthForm = ({ agencies, onAuthSuccess }: AuthFormProps) => {
                 </div>
                 <Button
                   type="submit"
-                  className="w-full localiza-gradient"
+                  className="w-full bg-green-600 hover:bg-green-700"
                   disabled={isLoading}
                 >
                   {isLoading ? 'Registrando...' : 'Crear Cuenta'}

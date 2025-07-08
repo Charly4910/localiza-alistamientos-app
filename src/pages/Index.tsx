@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 const Index = () => {
+  console.log('Index render - Auth state:', { user: typeof useAuth().user, profile: typeof useAuth().profile });
+  
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const { inspections, agencies, loading: dataLoading, saveInspection } = useSupabaseData();
   const [darkMode, setDarkMode] = useState(false);
@@ -27,7 +29,10 @@ const Index = () => {
   };
 
   const handleInspectionSave = async (inspectionData: any) => {
-    if (!profile) return;
+    if (!profile) {
+      console.error('No profile available for inspection save');
+      return;
+    }
     
     const fullInspectionData = {
       ...inspectionData,
@@ -42,13 +47,25 @@ const Index = () => {
     await saveInspection(fullInspectionData);
   };
 
-  if (authLoading || dataLoading) {
+  // Show loading while auth is being determined
+  if (authLoading) {
+    console.log('Auth loading...');
     return <LoadingOverlay isVisible={true} message="Cargando aplicación..." />;
   }
 
+  // Show auth form if not authenticated
   if (!user || !profile) {
+    console.log('No user or profile, showing auth form');
     return <AuthForm agencies={agencies} onAuthSuccess={() => {}} />;
   }
+
+  // Show loading while data is being fetched (only after auth is confirmed)
+  if (dataLoading) {
+    console.log('Data loading...');
+    return <LoadingOverlay isVisible={true} message="Cargando datos..." />;
+  }
+
+  console.log('Rendering main app for user:', profile.email);
 
   const currentUser = {
     id: profile.id,

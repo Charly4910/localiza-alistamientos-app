@@ -12,83 +12,105 @@ export const useSupabaseData = () => {
 
   // Fetch agencies
   const fetchAgencies = async () => {
-    const { data, error } = await supabase
-      .from('agencies')
-      .select('*')
-      .order('name');
+    try {
+      console.log('Fetching agencies...');
+      const { data, error } = await supabase
+        .from('agencies')
+        .select('*')
+        .order('name');
 
-    if (error) {
-      console.error('Error fetching agencies:', error);
-      return;
+      if (error) {
+        console.error('Error fetching agencies:', error);
+        return [];
+      }
+
+      console.log('Agencies fetched:', data?.length);
+      return data || [];
+    } catch (error) {
+      console.error('Error in fetchAgencies:', error);
+      return [];
     }
-
-    setAgencies(data || []);
   };
 
   // Fetch inspections
   const fetchInspections = async () => {
-    const { data: inspectionData, error: inspectionError } = await supabase
-      .from('vehicle_inspections')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      console.log('Fetching inspections...');
+      const { data: inspectionData, error: inspectionError } = await supabase
+        .from('vehicle_inspections')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (inspectionError) {
-      console.error('Error fetching inspections:', inspectionError);
-      return;
-    }
+      if (inspectionError) {
+        console.error('Error fetching inspections:', inspectionError);
+        return [];
+      }
 
-    // Fetch photos for each inspection
-    const inspectionsWithPhotos = await Promise.all(
-      (inspectionData || []).map(async (inspection) => {
-        const { data: photos, error: photosError } = await supabase
-          .from('vehicle_photos')
-          .select('*')
-          .eq('inspection_id', inspection.id);
+      console.log('Inspections fetched:', inspectionData?.length);
 
-        if (photosError) {
-          console.error('Error fetching photos:', photosError);
-          return {
-            ...inspection,
-            photos: [],
-            timestamp: new Date(inspection.created_at),
-            consecutiveNumber: inspection.consecutive_number,
-            inspector: {
-              email: inspection.inspector_email,
-              name: inspection.inspector_name,
-              userId: inspection.inspector_id || 'unknown'
-            }
-          };
-        }
+      // Fetch photos for each inspection
+      const inspectionsWithPhotos = await Promise.all(
+        (inspectionData || []).map(async (inspection) => {
+          try {
+            const { data: photos, error: photosError } = await supabase
+              .from('vehicle_photos')
+              .select('*')
+              .eq('inspection_id', inspection.id);
 
-        const vehiclePhotos = (photos || []).map(photo => ({
-          id: photo.id,
-          type: photo.photo_type as any,
-          url: supabase.storage.from('vehicle-photos').getPublicUrl(photo.file_path).data.publicUrl,
-          timestamp: new Date(photo.created_at)
-        }));
+            const vehiclePhotos = (photos || []).map(photo => ({
+              id: photo.id,
+              type: photo.photo_type as any,
+              url: supabase.storage.from('vehicle-photos').getPublicUrl(photo.file_path).data.publicUrl,
+              timestamp: new Date(photo.created_at || '')
+            }));
 
-        return {
-          ...inspection,
-          photos: vehiclePhotos,
-          timestamp: new Date(inspection.created_at),
-          consecutiveNumber: inspection.consecutive_number,
-          inspector: {
-            email: inspection.inspector_email,
-            name: inspection.inspector_name,
-            userId: inspection.inspector_id || 'unknown'
+            return {
+              ...inspection,
+              photos: vehiclePhotos,
+              timestamp: new Date(inspection.created_at || ''),
+              consecutiveNumber: inspection.consecutive_number,
+              inspector: {
+                email: inspection.inspector_email,
+                name: inspection.inspector_name,
+                userId: inspection.inspector_id || 'unknown'
+              }
+            };
+          } catch (error) {
+            console.error('Error processing inspection:', error);
+            return {
+              ...inspection,
+              photos: [],
+              timestamp: new Date(inspection.created_at || ''),
+              consecutiveNumber: inspection.consecutive_number,
+              inspector: {
+                email: inspection.inspector_email,
+                name: inspection.inspector_name,
+                userId: inspection.inspector_id || 'unknown'
+              }
+            };
           }
-        };
-      })
-    );
+        })
+      );
 
-    setInspections(inspectionsWithPhotos);
+      return inspectionsWithPhotos;
+    } catch (error) {
+      console.error('Error in fetchInspections:', error);
+      return [];
+    }
   };
 
   // Save inspection
   const saveInspection = async (inspectionData: Omit<VehicleInspection, 'id' | 'timestamp' | 'consecutiveNumber'>) => {
     try {
+      console.log('Saving inspection...');
+      
       // Get next consecutive number
-      const { data: consecutiveData } = await supabase.rpc('get_next_consecutive_number');
+      const { data: consecutiveData, error: consecutiveError } = await supabase.rpc('get_next_consecutive_number');
+      
+      if (consecutiveError) {
+        throw consecutiveError;
+      }
+      
       const consecutiveNumber = consecutiveData || 1;
 
       // Save inspection
@@ -113,30 +135,34 @@ export const useSupabaseData = () => {
 
       // Upload and save photos
       for (const photo of inspectionData.photos) {
-        // Convert data URL to blob
-        const response = await fetch(photo.url);
-        const blob = await response.blob();
-        
-        const fileName = `${inspection.id}/${photo.type}-${Date.now()}.jpg`;
-        
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
-          .from('vehicle-photos')
-          .upload(fileName, blob);
+        try {
+          // Convert data URL to blob
+          const response = await fetch(photo.url);
+          const blob = await response.blob();
+          
+          const fileName = `${inspection.id}/${photo.type}-${Date.now()}.jpg`;
+          
+          // Upload to storage
+          const { error: uploadError } = await supabase.storage
+            .from('vehicle-photos')
+            .upload(fileName, blob);
 
-        if (uploadError) {
-          console.error('Error uploading photo:', uploadError);
-          continue;
+          if (uploadError) {
+            console.error('Error uploading photo:', uploadError);
+            continue;
+          }
+
+          // Save photo record
+          await supabase
+            .from('vehicle_photos')
+            .insert({
+              inspection_id: inspection.id,
+              photo_type: photo.type,
+              file_path: fileName
+            });
+        } catch (photoError) {
+          console.error('Error processing photo:', photoError);
         }
-
-        // Save photo record
-        await supabase
-          .from('vehicle_photos')
-          .insert({
-            inspection_id: inspection.id,
-            photo_type: photo.type,
-            file_path: fileName
-          });
       }
 
       toast({
@@ -145,7 +171,8 @@ export const useSupabaseData = () => {
       });
 
       // Refresh inspections
-      await fetchInspections();
+      const newInspections = await fetchInspections();
+      setInspections(newInspections);
 
     } catch (error) {
       console.error('Error saving inspection:', error);
@@ -158,13 +185,37 @@ export const useSupabaseData = () => {
   };
 
   useEffect(() => {
+    let mounted = true;
+    
     const loadData = async () => {
-      setLoading(true);
-      await Promise.all([fetchAgencies(), fetchInspections()]);
-      setLoading(false);
+      try {
+        console.log('Loading data...');
+        setLoading(true);
+        
+        const [agenciesData, inspectionsData] = await Promise.all([
+          fetchAgencies(),
+          fetchInspections()
+        ]);
+        
+        if (mounted) {
+          setAgencies(agenciesData);
+          setInspections(inspectionsData);
+          setLoading(false);
+          console.log('Data loaded successfully');
+        }
+      } catch (error) {
+        console.error('Error loading data:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
     };
 
     loadData();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   return {
