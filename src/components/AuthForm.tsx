@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,30 +24,39 @@ const AuthForm = ({ agencies, onAuthSuccess }: AuthFormProps) => {
   const [activeTab, setActiveTab] = useState('login');
   const { toast } = useToast();
 
-  // Create admin user if it doesn't exist
+  // Create admin user only once
   useEffect(() => {
-    const createAdminIfNotExists = async () => {
+    const createAdminOnce = async () => {
       try {
-        // Try to sign up admin user (will fail silently if already exists)
-        await supabase.auth.signUp({
+        const { data: existingUser, error: checkError } = await supabase.auth.signInWithPassword({
           email: 'admin@rentingcolombia.com',
-          password: 'admin2026',
-          options: {
-            data: {
-              name: 'Administrador',
-              pin: '2026',
-              is_admin: true,
-              department: 'Administración'
-            }
-          }
+          password: 'admin2026'
         });
+        
+        if (checkError && checkError.message.includes('Invalid login credentials')) {
+          console.log('Admin user does not exist, creating...');
+          await supabase.auth.signUp({
+            email: 'admin@rentingcolombia.com',
+            password: 'admin2026',
+            options: {
+              data: {
+                name: 'Administrador',
+                pin: '2026',
+                is_admin: true,
+                department: 'Administración'
+              }
+            }
+          });
+        } else if (existingUser) {
+          // Sign out immediately if we were just checking
+          await supabase.auth.signOut();
+        }
       } catch (error) {
-        // Admin might already exist, that's ok
-        console.log('Admin setup attempt completed');
+        console.log('Admin setup completed');
       }
     };
 
-    createAdminIfNotExists();
+    createAdminOnce();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {

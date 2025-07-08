@@ -7,6 +7,7 @@ export const useSupabaseData = () => {
   const [inspections, setInspections] = useState<VehicleInspection[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const { toast } = useToast();
 
   const fetchAgencies = async () => {
@@ -173,7 +174,7 @@ export const useSupabaseData = () => {
   };
 
   const loadData = async () => {
-    if (loading) return; // Prevent multiple simultaneous loads
+    if (loading || dataLoaded) return;
     
     try {
       console.log('Loading data...');
@@ -186,6 +187,7 @@ export const useSupabaseData = () => {
       
       setAgencies(agenciesData);
       setInspections(inspectionsData);
+      setDataLoaded(true);
       console.log('Data loaded successfully');
     } catch (error) {
       console.error('Error loading data:', error);
@@ -195,8 +197,10 @@ export const useSupabaseData = () => {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (!dataLoaded) {
+      loadData();
+    }
+  }, [dataLoaded]);
 
   return {
     inspections,

@@ -25,19 +25,17 @@ const Index = () => {
     }
   };
 
+  console.log('Index render - authLoading:', authLoading, 'user:', !!user, 'profile:', !!profile);
+
   // Show loading while auth is being determined
   if (authLoading) {
-    console.log('Auth loading...');
     return <LoadingOverlay isVisible={true} message="Cargando aplicación..." />;
   }
 
   // Show auth form if not authenticated
   if (!user || !profile) {
-    console.log('No user or profile, showing auth form');
     return <AuthenticatedContent />;
   }
-
-  console.log('Rendering main app for user:', profile.email);
 
   const currentUser = {
     id: profile.id,

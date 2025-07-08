@@ -22,62 +22,65 @@ export const useAuth = () => {
   useEffect(() => {
     console.log('Auth hook initializing...');
     
-    const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
+    const getSession = async () => {
       try {
-        console.log('Fetching profile for user:', userId);
-        
-        // Simple direct query without complex RLS
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single();
-        
-        if (error) {
-          console.error('Error fetching profile:', error);
-          return null;
-        }
-        
-        console.log('Profile fetched successfully:', profileData);
-        return profileData;
-      } catch (error) {
-        console.error('Exception in fetchProfile:', error);
-        return null;
-      }
-    };
-
-    const handleAuthStateChange = async (event: string, session: Session | null) => {
-      console.log('Auth state changed:', event, session?.user?.email);
-      
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        const profileData = await fetchProfile(session.user.id);
-        setProfile(profileData);
-      } else {
-        setProfile(null);
-      }
-      
-      setLoading(false);
-    };
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
-
-    // Check for existing session
-    const initAuth = async () => {
-      try {
-        console.log('Checking existing session...');
         const { data: { session } } = await supabase.auth.getSession();
-        await handleAuthStateChange('INITIAL_SESSION', session);
+        console.log('Initial session:', session?.user?.email || 'No session');
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          console.log('Fetching profile for user:', session.user.id);
+          
+          // Fetch profile directly without complex RLS
+          const { data: profileData, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (error) {
+            console.error('Profile fetch error:', error);
+            setProfile(null);
+          } else {
+            console.log('Profile loaded:', profileData);
+            setProfile(profileData);
+          }
+        }
       } catch (error) {
-        console.error('Error in initAuth:', error);
+        console.error('Session error:', error);
+      } finally {
         setLoading(false);
       }
     };
 
-    initAuth();
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          setProfile(profileData);
+        } else {
+          setProfile(null);
+        }
+        
+        setLoading(false);
+      }
+    );
+
+    // Get initial session
+    getSession();
 
     return () => {
       subscription.unsubscribe();
