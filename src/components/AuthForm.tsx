@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,24 +24,21 @@ const AuthForm = ({ agencies, onAuthSuccess }: AuthFormProps) => {
   const [activeTab, setActiveTab] = useState('login');
   const { toast } = useToast();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    console.log('Attempting login for:', email);
+  // Create admin user if it doesn't exist
+  useEffect(() => {
+    const createAdminIfNotExists = async () => {
+      try {
+        // Check if admin profile exists
+        const { data: adminProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', 'admin@rentingcolombia.com')
+          .single();
 
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        console.error('Login error:', error);
-        
-        // If admin doesn't exist, create it
-        if (email === 'admin@rentingcolombia.com' && password === 'admin2026') {
-          console.log('Creating admin user...');
+        if (!adminProfile) {
+          console.log('Admin profile not found, attempting to create admin user...');
+          
+          // Try to sign up admin user
           const { error: signUpError } = await supabase.auth.signUp({
             email: 'admin@rentingcolombia.com',
             password: 'admin2026',
@@ -56,25 +53,38 @@ const AuthForm = ({ agencies, onAuthSuccess }: AuthFormProps) => {
           });
 
           if (signUpError) {
-            console.error('Admin creation error:', signUpError);
-            toast({
-              title: "Error de autenticación",
-              description: "No se pudo crear el usuario administrador",
-              variant: "destructive",
-            });
+            console.log('Admin user might already exist in auth.users');
           } else {
-            toast({
-              title: "Administrador creado",
-              description: "El usuario administrador ha sido creado. Puedes iniciar sesión ahora.",
-            });
+            console.log('Admin user created successfully');
           }
-        } else {
-          toast({
-            title: "Error de inicio de sesión",
-            description: "Email o contraseña incorrectos",
-            variant: "destructive",
-          });
         }
+      } catch (error) {
+        console.log('Error checking/creating admin:', error);
+      }
+    };
+
+    createAdminIfNotExists();
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    console.log('Attempting login for:', email);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        console.error('Login error:', error);
+        toast({
+          title: "Error de inicio de sesión",
+          description: "Email o contraseña incorrectos",
+          variant: "destructive",
+        });
       } else {
         console.log('Login successful for:', data.user?.email);
         toast({
@@ -181,7 +191,7 @@ const AuthForm = ({ agencies, onAuthSuccess }: AuthFormProps) => {
             Alistamientos Localiza
           </CardTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Admin: admin@rentingcolombia.com / PIN: admin2026
+            Admin: admin@rentingcolombia.com / Contraseña: admin2026
           </p>
         </CardHeader>
         <CardContent>

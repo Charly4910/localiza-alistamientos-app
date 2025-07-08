@@ -11,8 +11,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 const Index = () => {
-  console.log('Index render - Auth state:', { user: typeof useAuth().user, profile: typeof useAuth().profile });
-  
   const { user, profile, loading: authLoading, signOut } = useAuth();
   const { inspections, agencies, loading: dataLoading, saveInspection } = useSupabaseData();
   const [darkMode, setDarkMode] = useState(false);
@@ -59,12 +57,6 @@ const Index = () => {
     return <AuthForm agencies={agencies} onAuthSuccess={() => {}} />;
   }
 
-  // Show loading while data is being fetched (only after auth is confirmed)
-  if (dataLoading) {
-    console.log('Data loading...');
-    return <LoadingOverlay isVisible={true} message="Cargando datos..." />;
-  }
-
   console.log('Rendering main app for user:', profile.email);
 
   const currentUser = {
@@ -87,6 +79,8 @@ const Index = () => {
       />
       
       <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
+        {dataLoading && <LoadingOverlay isVisible={true} message="Cargando datos..." />}
+        
         <Tabs defaultValue={currentUser.isAdmin ? "admin" : "nuevo"} className="space-y-4 sm:space-y-6">
           <TabsList className={`grid w-full max-w-2xl mx-auto h-10 ${currentUser.isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
             {!currentUser.isAdmin && (

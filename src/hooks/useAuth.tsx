@@ -22,9 +22,9 @@ export const useAuth = () => {
   useEffect(() => {
     console.log('Auth hook initializing...');
     
-    let mounted = true;
+    let isMounted = true;
 
-    const fetchProfile = async (userId: string) => {
+    const fetchProfile = async (userId: string): Promise<UserProfile | null> => {
       try {
         console.log('Fetching profile for user:', userId);
         const { data: profileData, error } = await supabase
@@ -46,32 +46,32 @@ export const useAuth = () => {
       }
     };
 
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        
-        if (!mounted) return;
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          const profileData = await fetchProfile(session.user.id);
-          if (mounted) {
-            setProfile(profileData);
-          }
-        } else {
-          if (mounted) {
-            setProfile(null);
-          }
+    const handleAuthStateChange = async (event: string, session: Session | null) => {
+      console.log('Auth state changed:', event, session?.user?.email);
+      
+      if (!isMounted) return;
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        const profileData = await fetchProfile(session.user.id);
+        if (isMounted) {
+          setProfile(profileData);
         }
-        
-        if (mounted) {
-          setLoading(false);
+      } else {
+        if (isMounted) {
+          setProfile(null);
         }
       }
-    );
+      
+      if (isMounted) {
+        setLoading(false);
+      }
+    };
+
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     // Check for existing session
     const initAuth = async () => {
@@ -81,30 +81,16 @@ export const useAuth = () => {
         
         if (error) {
           console.error('Error getting session:', error);
-          if (mounted) {
+          if (isMounted) {
             setLoading(false);
           }
           return;
         }
         
-        if (!mounted) return;
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          const profileData = await fetchProfile(session.user.id);
-          if (mounted) {
-            setProfile(profileData);
-          }
-        }
-        
-        if (mounted) {
-          setLoading(false);
-        }
+        await handleAuthStateChange('INITIAL_SESSION', session);
       } catch (error) {
         console.error('Error in initAuth:', error);
-        if (mounted) {
+        if (isMounted) {
           setLoading(false);
         }
       }
@@ -113,7 +99,7 @@ export const useAuth = () => {
     initAuth();
 
     return () => {
-      mounted = false;
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);

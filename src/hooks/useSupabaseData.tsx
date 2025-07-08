@@ -7,10 +7,9 @@ import { useToast } from '@/hooks/use-toast';
 export const useSupabaseData = () => {
   const [inspections, setInspections] = useState<VehicleInspection[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  // Fetch agencies
   const fetchAgencies = async () => {
     try {
       console.log('Fetching agencies...');
@@ -32,7 +31,6 @@ export const useSupabaseData = () => {
     }
   };
 
-  // Fetch inspections
   const fetchInspections = async () => {
     try {
       console.log('Fetching inspections...');
@@ -48,7 +46,6 @@ export const useSupabaseData = () => {
 
       console.log('Inspections fetched:', inspectionData?.length);
 
-      // Fetch photos for each inspection
       const inspectionsWithPhotos = await Promise.all(
         (inspectionData || []).map(async (inspection) => {
           try {
@@ -99,12 +96,10 @@ export const useSupabaseData = () => {
     }
   };
 
-  // Save inspection
   const saveInspection = async (inspectionData: Omit<VehicleInspection, 'id' | 'timestamp' | 'consecutiveNumber'>) => {
     try {
       console.log('Saving inspection...');
       
-      // Get next consecutive number
       const { data: consecutiveData, error: consecutiveError } = await supabase.rpc('get_next_consecutive_number');
       
       if (consecutiveError) {
@@ -113,7 +108,6 @@ export const useSupabaseData = () => {
       
       const consecutiveNumber = consecutiveData || 1;
 
-      // Save inspection
       const { data: inspection, error: inspectionError } = await supabase
         .from('vehicle_inspections')
         .insert({
@@ -133,16 +127,13 @@ export const useSupabaseData = () => {
         throw inspectionError;
       }
 
-      // Upload and save photos
       for (const photo of inspectionData.photos) {
         try {
-          // Convert data URL to blob
           const response = await fetch(photo.url);
           const blob = await response.blob();
           
           const fileName = `${inspection.id}/${photo.type}-${Date.now()}.jpg`;
           
-          // Upload to storage
           const { error: uploadError } = await supabase.storage
             .from('vehicle-photos')
             .upload(fileName, blob);
@@ -152,7 +143,6 @@ export const useSupabaseData = () => {
             continue;
           }
 
-          // Save photo record
           await supabase
             .from('vehicle_photos')
             .insert({
@@ -170,7 +160,6 @@ export const useSupabaseData = () => {
         description: `El alistamiento #${consecutiveNumber} ha sido guardado exitosamente`,
       });
 
-      // Refresh inspections
       const newInspections = await fetchInspections();
       setInspections(newInspections);
 
@@ -184,38 +173,28 @@ export const useSupabaseData = () => {
     }
   };
 
+  const loadData = async () => {
+    try {
+      console.log('Loading data...');
+      setLoading(true);
+      
+      const [agenciesData, inspectionsData] = await Promise.all([
+        fetchAgencies(),
+        fetchInspections()
+      ]);
+      
+      setAgencies(agenciesData);
+      setInspections(inspectionsData);
+      console.log('Data loaded successfully');
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    let mounted = true;
-    
-    const loadData = async () => {
-      try {
-        console.log('Loading data...');
-        setLoading(true);
-        
-        const [agenciesData, inspectionsData] = await Promise.all([
-          fetchAgencies(),
-          fetchInspections()
-        ]);
-        
-        if (mounted) {
-          setAgencies(agenciesData);
-          setInspections(inspectionsData);
-          setLoading(false);
-          console.log('Data loaded successfully');
-        }
-      } catch (error) {
-        console.error('Error loading data:', error);
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
     loadData();
-
-    return () => {
-      mounted = false;
-    };
   }, []);
 
   return {
@@ -224,6 +203,7 @@ export const useSupabaseData = () => {
     loading,
     saveInspection,
     fetchInspections,
-    fetchAgencies
+    fetchAgencies,
+    loadData
   };
 };
