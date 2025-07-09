@@ -7,14 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Save, Car, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import PhotoCapture from './PhotoCapture';
-import { PhotoType, VehicleInspection, PHOTO_LABELS, User } from '@/types/vehicle';
+import { PhotoType, PHOTO_LABELS, User } from '@/types/vehicle';
+import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useAuth } from '@/hooks/useAuth';
 
 interface VehicleInspectionFormProps {
-  onInspectionSave: (inspection: Omit<VehicleInspection, 'id' | 'timestamp' | 'consecutiveNumber'>) => void;
   user: User;
 }
 
-const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionFormProps) => {
+const VehicleInspectionForm = ({ user }: VehicleInspectionFormProps) => {
   const [placa, setPlaca] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [fechaVencimientoExtintor, setFechaVencimientoExtintor] = useState('');
@@ -54,6 +55,8 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { createInspection, uploadPhoto, addInspectionPhoto, fetchData } = useSupabaseData();
+  const { profile } = useAuth();
 
   // Orden específico solicitado por el usuario
   const photoTypes: PhotoType[] = [
@@ -85,6 +88,15 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
       return;
     }
 
+    if (!profile) {
+      toast({
+        title: "Error",
+        description: "No se pudo identificar al usuario",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const capturedPhotos = Object.entries(photos).filter(([_, file]) => file !== null);
     
     if (capturedPhotos.length === 0) {
@@ -99,31 +111,30 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
     setIsLoading(true);
 
     try {
-      const vehiclePhotos = capturedPhotos.map(([type, file]) => ({
-        id: `${Date.now()}-${type}`,
-        type: type as PhotoType,
-        url: photoUrls[type as PhotoType]!,
-        timestamp: new Date()
-      }));
-
-      const inspection: Omit<VehicleInspection, 'id' | 'timestamp' | 'consecutiveNumber'> = {
+      // Crear el alistamiento
+      const inspection = await createInspection({
         placa: placa.toUpperCase(),
-        photos: vehiclePhotos,
-        observaciones,
-        fechaVencimientoExtintor: fechaVencimientoExtintor || undefined,
-        inspector: {
-          email: user.email,
-          name: user.name,
-          userId: user.id
-        },
-        department: user.department || 'No asignada'
-      };
+        observaciones: observaciones || null,
+        fecha_vencimiento_extintor: fechaVencimientoExtintor || null,
+        inspector_id: profile.id,
+        agency_id: profile.agency_id,
+      });
 
-      onInspectionSave(inspection);
+      // Subir fotos
+      for (const [photoType, file] of capturedPhotos) {
+        if (file) {
+          try {
+            const photoUrl = await uploadPhoto(file, inspection.id, photoType);
+            await addInspectionPhoto(inspection.id, photoType, photoUrl);
+          } catch (photoError) {
+            console.error(`Error uploading photo ${photoType}:`, photoError);
+          }
+        }
+      }
 
       toast({
         title: "✅ Alistamiento completado",
-        description: `El alistamiento del vehículo ${placa.toUpperCase()} ha sido guardado exitosamente`,
+        description: `El alistamiento #${inspection.consecutive_number} del vehículo ${placa.toUpperCase()} ha sido guardado exitosamente`,
       });
 
       // Limpiar formulario
@@ -137,6 +148,7 @@ const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionForm
       setPhotoUrls(Object.fromEntries(photoTypes.map(type => [type, null])) as Record<PhotoType, string | null>);
 
     } catch (error) {
+      console.error('Error saving inspection:', error);
       toast({
         title: "Error",
         description: "Hubo un problema al guardar el alistamiento",
