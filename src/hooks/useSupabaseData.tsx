@@ -21,6 +21,11 @@ type Inspection = Database['public']['Tables']['inspections']['Row'] & {
   }>;
 };
 
+// Create a custom insert type that makes consecutive_number optional
+type InspectionInsert = Omit<Database['public']['Tables']['inspections']['Insert'], 'consecutive_number'> & {
+  consecutive_number?: number;
+};
+
 export const useSupabaseData = () => {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [inspections, setInspections] = useState<Inspection[]>([]);
@@ -99,7 +104,7 @@ export const useSupabaseData = () => {
     }
   };
 
-  const createInspection = async (inspectionData: Database['public']['Tables']['inspections']['Insert']) => {
+  const createInspection = async (inspectionData: InspectionInsert) => {
     try {
       const { data, error } = await supabase
         .from('inspections')

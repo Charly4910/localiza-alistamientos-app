@@ -43,7 +43,7 @@ const VehicleInspectionForm = ({ user }: VehicleInspectionFormProps) => {
     setIsLoading(true);
 
     try {
-      // Crear el alistamiento
+      // Crear el alistamiento - sin consecutive_number ya que se genera automáticamente
       const inspectionData = {
         placa: placa.toUpperCase(),
         observaciones: observaciones || null,
