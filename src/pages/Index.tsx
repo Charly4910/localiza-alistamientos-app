@@ -1,22 +1,43 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/Header';
-import AuthForm from '@/components/AuthForm';
+import LoginForm from '@/components/LoginForm';
+import UserRegistration from '@/components/UserRegistration';
+import PinLogin from '@/components/PinLogin';
 import VehicleInspectionForm from '@/components/VehicleInspectionForm';
 import InspectionHistory from '@/components/InspectionHistory';
 import AdminPanel from '@/components/AdminPanel';
 import LoadingOverlay from '@/components/LoadingOverlay';
-import { useAuth } from '@/hooks/useAuth';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { VehicleInspection, User, DEFAULT_AGENCIES, Agency } from '@/types/vehicle';
 
 const Index = () => {
-  const { user, profile, loading: authLoading, signOut } = useAuth();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [inspections, setInspections] = useState<VehicleInspection[]>([]);
+  const [loginStep, setLoginStep] = useState<'email' | 'register' | 'pin'>('email');
+  const [tempLoginData, setTempLoginData] = useState<{ email: string; name: string } | null>(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [consecutiveCounter, setConsecutiveCounter] = useState(1);
+  const [agencies, setAgencies] = useState<Agency[]>(DEFAULT_AGENCIES);
+
+  // Tema oscuro
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('localiza_dark_mode');
+    if (savedDarkMode) {
+      const isDark = JSON.parse(savedDarkMode);
+      setDarkMode(isDark);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      }
+    }
+  }, []);
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
+    localStorage.setItem('localiza_dark_mode', JSON.stringify(newDarkMode));
     
     if (newDarkMode) {
       document.documentElement.classList.add('dark');
@@ -25,74 +46,209 @@ const Index = () => {
     }
   };
 
-  console.log('Index render - authLoading:', authLoading, 'user:', !!user, 'profile:', !!profile);
-
-  // Show loading while auth is being determined
-  if (authLoading) {
-    return <LoadingOverlay isVisible={true} message="Cargando aplicación..." />;
-  }
-
-  // Show auth form if not authenticated
-  if (!user || !profile) {
-    return <AuthenticatedContent />;
-  }
-
-  const currentUser = {
-    id: profile.id,
-    email: profile.email,
-    name: profile.name,
-    pin: profile.pin,
-    isAdmin: profile.is_admin,
-    department: profile.department,
-    createdAt: new Date(profile.created_at)
-  };
-
-  return <MainApp user={currentUser} signOut={signOut} darkMode={darkMode} toggleDarkMode={toggleDarkMode} />;
-};
-
-const AuthenticatedContent = () => {
-  const { agencies } = useSupabaseData();
-  
-  return <AuthForm agencies={agencies} onAuthSuccess={() => {}} />;
-};
-
-const MainApp = ({ user, signOut, darkMode, toggleDarkMode }: any) => {
-  const { inspections, agencies, loading: dataLoading, saveInspection } = useSupabaseData();
-
-  const handleInspectionSave = async (inspectionData: any) => {
-    if (!user) {
-      console.error('No user available for inspection save');
-      return;
+  // Cargar datos del localStorage al iniciar
+  useEffect(() => {
+    const savedUser = localStorage.getItem('localiza_current_user');
+    const savedUsers = localStorage.getItem('localiza_users');
+    const savedInspections = localStorage.getItem('localiza_inspections');
+    const savedCounter = localStorage.getItem('localiza_consecutive_counter');
+    const savedAgencies = localStorage.getItem('localiza_agencies');
+    
+    if (savedUser) {
+      setCurrentUser(JSON.parse(savedUser));
     }
     
-    const fullInspectionData = {
-      ...inspectionData,
-      inspector: {
-        email: user.email,
-        name: user.name,
-        userId: user.id
-      },
-      department: user.department || 'No asignada'
-    };
+    if (savedUsers) {
+      const parsedUsers = JSON.parse(savedUsers);
+      const usersWithDates = parsedUsers.map((user: any) => ({
+        ...user,
+        createdAt: new Date(user.createdAt)
+      }));
+      setUsers(usersWithDates);
+    }
+    
+    if (savedInspections) {
+      const parsedInspections = JSON.parse(savedInspections);
+      const inspectionsWithDates = parsedInspections.map((inspection: any) => ({
+        ...inspection,
+        timestamp: new Date(inspection.timestamp),
+        photos: inspection.photos.map((photo: any) => ({
+          ...photo,
+          timestamp: new Date(photo.timestamp)
+        }))
+      }));
+      setInspections(inspectionsWithDates);
+    }
 
-    await saveInspection(fullInspectionData);
+    if (savedCounter) {
+      setConsecutiveCounter(parseInt(savedCounter));
+    }
+
+    if (savedAgencies) {
+      setAgencies(JSON.parse(savedAgencies));
+    }
+  }, []);
+
+  const showLoading = (message: string, duration: number = 2000) => {
+    setLoadingMessage(message);
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+    }, duration);
   };
+
+  const handleEmailLogin = (email: string, name: string) => {
+    setTempLoginData({ email, name });
+    showLoading('Verificando usuario...', 1500);
+    
+    setTimeout(() => {
+      if (email === 'admin@rentingcolombia.com') {
+        setLoginStep('pin');
+        return;
+      }
+      
+      const existingUser = users.find(u => u.email === email);
+      if (existingUser) {
+        setLoginStep('pin');
+      } else {
+        setLoginStep('register');
+      }
+    }, 1500);
+  };
+
+  const handleUserRegistered = (user: User) => {
+    showLoading('Creando usuario...', 1500);
+    
+    setTimeout(() => {
+      const updatedUsers = [...users, user];
+      setUsers(updatedUsers);
+      setCurrentUser(user);
+      localStorage.setItem('localiza_users', JSON.stringify(updatedUsers));
+      localStorage.setItem('localiza_current_user', JSON.stringify(user));
+      setLoginStep('email');
+      setTempLoginData(null);
+    }, 1500);
+  };
+
+  const handlePinLogin = (user: User) => {
+    showLoading('Iniciando sesión...', 1500);
+    
+    setTimeout(() => {
+      setCurrentUser(user);
+      localStorage.setItem('localiza_current_user', JSON.stringify(user));
+      setLoginStep('email');
+      setTempLoginData(null);
+    }, 1500);
+  };
+
+  const handleLogout = () => {
+    showLoading('Cerrando sesión...', 1500);
+    
+    setTimeout(() => {
+      setCurrentUser(null);
+      setLoginStep('email');
+      setTempLoginData(null);
+      localStorage.removeItem('localiza_current_user');
+    }, 1500);
+  };
+
+  const handleBackToEmailLogin = () => {
+    setLoginStep('email');
+    setTempLoginData(null);
+  };
+
+  const handleInspectionSave = (inspectionData: Omit<VehicleInspection, 'id' | 'timestamp' | 'consecutiveNumber'>) => {
+    showLoading('Guardando alistamiento...', 2000);
+    
+    setTimeout(() => {
+      const newInspection: VehicleInspection = {
+        ...inspectionData,
+        id: `inspection_${Date.now()}`,
+        consecutiveNumber: consecutiveCounter,
+        timestamp: new Date()
+      };
+      
+      const updatedInspections = [...inspections, newInspection];
+      const newCounter = consecutiveCounter + 1;
+      
+      setInspections(updatedInspections);
+      setConsecutiveCounter(newCounter);
+      
+      localStorage.setItem('localiza_inspections', JSON.stringify(updatedInspections));
+      localStorage.setItem('localiza_consecutive_counter', newCounter.toString());
+    }, 2000);
+  };
+
+  const handleUpdateUsers = (updatedUsers: User[]) => {
+    showLoading('Actualizando usuarios...', 1500);
+    
+    setTimeout(() => {
+      setUsers(updatedUsers);
+      localStorage.setItem('localiza_users', JSON.stringify(updatedUsers));
+    }, 1500);
+  };
+
+  const handleUpdateAgencies = (updatedAgencies: Agency[]) => {
+    showLoading('Actualizando agencias...', 1500);
+    
+    setTimeout(() => {
+      setAgencies(updatedAgencies);
+      localStorage.setItem('localiza_agencies', JSON.stringify(updatedAgencies));
+    }, 1500);
+  };
+
+  if (!currentUser) {
+    if (loginStep === 'register' && tempLoginData) {
+      return (
+        <>
+          <UserRegistration
+            email={tempLoginData.email}
+            name={tempLoginData.name}
+            onUserRegistered={handleUserRegistered}
+            existingUsers={users}
+            agencies={agencies}
+          />
+          <LoadingOverlay isVisible={loading} message={loadingMessage} />
+        </>
+      );
+    }
+
+    if (loginStep === 'pin' && tempLoginData) {
+      return (
+        <>
+          <PinLogin
+            email={tempLoginData.email}
+            name={tempLoginData.name}
+            onLogin={handlePinLogin}
+            users={users}
+            onBackToEmailLogin={handleBackToEmailLogin}
+          />
+          <LoadingOverlay isVisible={loading} message={loadingMessage} />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <LoginForm onLogin={handleEmailLogin} />
+        <LoadingOverlay isVisible={loading} message={loadingMessage} />
+      </>
+    );
+  }
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-gray-900' : 'bg-gradient-to-br from-green-50 to-green-100'}`}>
       <Header 
-        user={user} 
-        onLogout={signOut} 
+        user={currentUser} 
+        onLogout={handleLogout} 
         darkMode={darkMode}
         toggleDarkMode={toggleDarkMode}
       />
       
       <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
-        {dataLoading && <LoadingOverlay isVisible={true} message="Cargando datos..." />}
-        
-        <Tabs defaultValue={user.isAdmin ? "admin" : "nuevo"} className="space-y-4 sm:space-y-6">
-          <TabsList className={`grid w-full max-w-2xl mx-auto h-10 ${user.isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            {!user.isAdmin && (
+        <Tabs defaultValue={currentUser.isAdmin ? "admin" : "nuevo"} className="space-y-4 sm:space-y-6">
+          <TabsList className={`grid w-full max-w-2xl mx-auto h-10 ${currentUser.isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {!currentUser.isAdmin && (
               <TabsTrigger value="nuevo" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-xs sm:text-sm">
                 Nuevo Alistamiento
               </TabsTrigger>
@@ -100,14 +256,14 @@ const MainApp = ({ user, signOut, darkMode, toggleDarkMode }: any) => {
             <TabsTrigger value="historial" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-xs sm:text-sm">
               Historial
             </TabsTrigger>
-            {user.isAdmin && (
+            {currentUser.isAdmin && (
               <TabsTrigger value="admin" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-xs sm:text-sm">
                 Administración
               </TabsTrigger>
             )}
           </TabsList>
 
-          {!user.isAdmin && (
+          {!currentUser.isAdmin && (
             <TabsContent value="nuevo" className="space-y-4 sm:space-y-6">
               <div className="text-center mb-4 sm:mb-6">
                 <h2 className="text-xl sm:text-3xl font-bold text-green-800 dark:text-green-400 mb-2">
@@ -117,7 +273,7 @@ const MainApp = ({ user, signOut, darkMode, toggleDarkMode }: any) => {
                   Documenta el estado del vehículo con fotos detalladas
                 </p>
               </div>
-              <VehicleInspectionForm onInspectionSave={handleInspectionSave} user={user} />
+              <VehicleInspectionForm onInspectionSave={handleInspectionSave} user={currentUser} />
             </TabsContent>
           )}
 
@@ -133,7 +289,7 @@ const MainApp = ({ user, signOut, darkMode, toggleDarkMode }: any) => {
             <InspectionHistory inspections={inspections} />
           </TabsContent>
 
-          {user.isAdmin && (
+          {currentUser.isAdmin && (
             <TabsContent value="admin" className="space-y-4 sm:space-y-6">
               <div className="text-center mb-4 sm:mb-6">
                 <h2 className="text-xl sm:text-3xl font-bold text-green-800 dark:text-green-400 mb-2">
@@ -144,11 +300,11 @@ const MainApp = ({ user, signOut, darkMode, toggleDarkMode }: any) => {
                 </p>
               </div>
               <AdminPanel 
-                users={[]}
+                users={users} 
                 inspections={inspections}
-                onUpdateUsers={() => {}}
+                onUpdateUsers={handleUpdateUsers}
                 agencies={agencies}
-                onUpdateAgencies={() => {}}
+                onUpdateAgencies={handleUpdateAgencies}
               />
             </TabsContent>
           )}
@@ -163,11 +319,13 @@ const MainApp = ({ user, signOut, darkMode, toggleDarkMode }: any) => {
               <span className="font-semibold text-green-700 dark:text-green-400">Charly Hernando Avendaño</span>
             </p>
             <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-              Ingeniero de Sistemas - Versión 2.0 con Supabase
+              Ingeniero de Sistemas - Versión 1.0
             </p>
           </div>
         </div>
       </footer>
+
+      <LoadingOverlay isVisible={loading} message={loadingMessage} />
     </div>
   );
 };
