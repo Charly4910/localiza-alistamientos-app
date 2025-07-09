@@ -2,23 +2,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Database } from '@/integrations/supabase/types';
 
-interface Agency {
-  id: string;
-  name: string;
-  abbreviation: string;
-  created_at: string;
-}
-
-interface Inspection {
-  id: string;
-  consecutive_number: number;
-  placa: string;
-  observaciones: string | null;
-  fecha_vencimiento_extintor: string | null;
-  inspector_id: string;
-  agency_id: string | null;
-  created_at: string;
+type Agency = Database['public']['Tables']['agencies']['Row'];
+type Inspection = Database['public']['Tables']['inspections']['Row'] & {
   profiles?: {
     name: string;
     email: string;
@@ -32,7 +19,7 @@ interface Inspection {
     photo_type: string;
     photo_url: string;
   }>;
-}
+};
 
 export const useSupabaseData = () => {
   const [agencies, setAgencies] = useState<Agency[]>([]);
@@ -112,13 +99,7 @@ export const useSupabaseData = () => {
     }
   };
 
-  const createInspection = async (inspectionData: {
-    placa: string;
-    observaciones?: string;
-    fecha_vencimiento_extintor?: string;
-    inspector_id: string;
-    agency_id?: string;
-  }) => {
+  const createInspection = async (inspectionData: Database['public']['Tables']['inspections']['Insert']) => {
     try {
       const { data, error } = await supabase
         .from('inspections')
@@ -128,6 +109,10 @@ export const useSupabaseData = () => {
 
       if (error) {
         throw error;
+      }
+
+      if (!data) {
+        throw new Error('No data returned from inspection creation');
       }
 
       toast({

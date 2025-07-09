@@ -12,7 +12,7 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 const Index = () => {
   const { user, profile, loading: authLoading, signOut } = useAuth();
-  const { inspections, loading: dataLoading } = useSupabaseData();
+  const { inspections, agencies, loading: dataLoading } = useSupabaseData();
   const [darkMode, setDarkMode] = useState(false);
 
   const toggleDarkMode = () => {
@@ -55,6 +55,28 @@ const Index = () => {
     department: profile.agency_id || 'Sin asignar',
     createdAt: new Date(profile.created_at)
   };
+
+  // Convertir inspections de Supabase al formato esperado por InspectionHistory
+  const vehicleInspections = inspections.map(inspection => ({
+    id: inspection.id,
+    consecutiveNumber: inspection.consecutive_number,
+    placa: inspection.placa,
+    photos: inspection.inspection_photos?.map(photo => ({
+      id: photo.id,
+      type: photo.photo_type as any,
+      url: photo.photo_url,
+      timestamp: new Date()
+    })) || [],
+    observaciones: inspection.observaciones || '',
+    fechaVencimientoExtintor: inspection.fecha_vencimiento_extintor || undefined,
+    inspector: {
+      email: inspection.profiles?.email || '',
+      name: inspection.profiles?.name || '',
+      userId: inspection.inspector_id
+    },
+    department: inspection.agencies?.name || 'Sin asignar',
+    timestamp: new Date(inspection.created_at)
+  }));
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-gray-900' : 'bg-gradient-to-br from-green-50 to-green-100'}`}>
@@ -106,7 +128,7 @@ const Index = () => {
                 Busca y revisa alistamientos anteriores por placa
               </p>
             </div>
-            <InspectionHistory inspections={inspections} />
+            <InspectionHistory inspections={vehicleInspections} />
           </TabsContent>
 
           {currentUser.isAdmin && (
@@ -119,7 +141,13 @@ const Index = () => {
                   Gestiona usuarios, claves de acceso y alistamientos
                 </p>
               </div>
-              <AdminPanel />
+              <AdminPanel 
+                users={[]} 
+                inspections={vehicleInspections}
+                onUpdateUsers={() => {}}
+                agencies={agencies}
+                onUpdateAgencies={() => {}}
+              />
             </TabsContent>
           )}
         </Tabs>

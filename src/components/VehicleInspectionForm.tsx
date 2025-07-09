@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,6 +118,11 @@ const VehicleInspectionForm = ({ user }: VehicleInspectionFormProps) => {
         inspector_id: profile.id,
         agency_id: profile.agency_id,
       });
+
+      // Verificar que inspection no sea null
+      if (!inspection) {
+        throw new Error('Failed to create inspection');
+      }
 
       // Subir fotos
       for (const [photoType, file] of capturedPhotos) {
