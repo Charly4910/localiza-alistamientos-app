@@ -12,7 +12,7 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 
 const Index = () => {
   const { user, profile, loading: authLoading, signOut } = useAuth();
-  const { inspections, agencies, loading: dataLoading } = useSupabaseData();
+  const { inspections, agencies, loading: dataLoading, fetchData } = useSupabaseData();
   const [darkMode, setDarkMode] = useState(false);
 
   const toggleDarkMode = () => {
@@ -51,9 +51,9 @@ const Index = () => {
     email: profile.email,
     name: profile.name,
     pin: profile.pin,
-    isAdmin: profile.is_admin,
+    isAdmin: profile.is_admin || false,
     department: profile.agency_id || 'Sin asignar',
-    createdAt: new Date(profile.created_at)
+    createdAt: new Date(profile.created_at || Date.now())
   };
 
   // Convertir inspections de Supabase al formato esperado por InspectionHistory
@@ -75,7 +75,7 @@ const Index = () => {
       userId: inspection.inspector_id
     },
     department: inspection.agencies?.name || 'Sin asignar',
-    timestamp: new Date(inspection.created_at)
+    timestamp: new Date(inspection.created_at || Date.now())
   }));
 
   return (
@@ -144,9 +144,9 @@ const Index = () => {
               <AdminPanel 
                 users={[]} 
                 inspections={vehicleInspections}
-                onUpdateUsers={() => {}}
+                onUpdateUsers={() => fetchData()}
                 agencies={agencies}
-                onUpdateAgencies={() => {}}
+                onUpdateAgencies={() => fetchData()}
               />
             </TabsContent>
           )}

@@ -14,13 +14,154 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agencies: {
+        Row: {
+          abbreviation: string
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          abbreviation: string
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          abbreviation?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      inspection_photos: {
+        Row: {
+          created_at: string | null
+          id: string
+          inspection_id: string
+          photo_type: string
+          photo_url: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          inspection_id: string
+          photo_type: string
+          photo_url: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          inspection_id?: string
+          photo_type?: string
+          photo_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspection_photos_inspection_id_fkey"
+            columns: ["inspection_id"]
+            isOneToOne: false
+            referencedRelation: "inspections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inspections: {
+        Row: {
+          agency_id: string | null
+          consecutive_number: number
+          created_at: string | null
+          fecha_vencimiento_extintor: string | null
+          id: string
+          inspector_id: string
+          observaciones: string | null
+          placa: string
+        }
+        Insert: {
+          agency_id?: string | null
+          consecutive_number: number
+          created_at?: string | null
+          fecha_vencimiento_extintor?: string | null
+          id?: string
+          inspector_id: string
+          observaciones?: string | null
+          placa: string
+        }
+        Update: {
+          agency_id?: string | null
+          consecutive_number?: number
+          created_at?: string | null
+          fecha_vencimiento_extintor?: string | null
+          id?: string
+          inspector_id?: string
+          observaciones?: string | null
+          placa?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inspections_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inspections_inspector_id_fkey"
+            columns: ["inspector_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          agency_id: string | null
+          created_at: string | null
+          email: string
+          id: string
+          is_admin: boolean | null
+          name: string
+          pin: string
+        }
+        Insert: {
+          agency_id?: string | null
+          created_at?: string | null
+          email: string
+          id: string
+          is_admin?: boolean | null
+          name: string
+          pin?: string
+        }
+        Update: {
+          agency_id?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_admin?: boolean | null
+          name?: string
+          pin?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_next_consecutive: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

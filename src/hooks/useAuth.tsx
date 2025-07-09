@@ -28,29 +28,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Obtener sesión inicial
-    const getInitialSession = async () => {
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
-      
-      if (initialSession?.user) {
-        await fetchProfile(initialSession.user.id);
-      }
-      
-      setLoading(false);
-    };
-
-    getInitialSession();
-
-    // Escuchar cambios de autenticación
+    console.log('AuthProvider: Inicializando...');
+    
+    // Configurar listener de cambios de auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          await fetchProfile(session.user.id);
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+          }, 0);
         } else {
           setProfile(null);
         }
@@ -59,11 +49,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
+    // Obtener sesión inicial
+    const getInitialSession = async () => {
+      try {
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        console.log('Sesión inicial:', initialSession?.user?.email);
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+        
+        if (initialSession?.user) {
+          await fetchProfile(initialSession.user.id);
+        }
+      } catch (error) {
+        console.error('Error obteniendo sesión inicial:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getInitialSession();
+
     return () => subscription.unsubscribe();
   }, []);
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('Obteniendo perfil para usuario:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -75,6 +86,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
+      console.log('Perfil obtenido:', data);
       setProfile(data);
     } catch (error) {
       console.error('Error in fetchProfile:', error);
@@ -83,17 +95,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('Intentando iniciar sesión con:', email);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error('Error de login:', error);
         toast({
           title: "Error de inicio de sesión",
           description: error.message,
           variant: "destructive",
         });
+      } else {
+        console.log('Login exitoso');
       }
 
       return { error };
@@ -189,6 +205,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signOut,
     updateProfile,
   };
+
+  console.log('AuthProvider state:', { 
+    user: user?.email, 
+    profile: profile?.name, 
+    loading 
+  });
 
   return (
     <AuthContext.Provider value={value}>
