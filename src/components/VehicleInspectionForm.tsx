@@ -1,32 +1,77 @@
-import React, { useState, useRef } from 'react';
+
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { format } from 'date-fns';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Save, Car, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
-import { User } from '@/types/vehicle';
+import PhotoCapture from './PhotoCapture';
+import { PhotoType, VehicleInspection, PHOTO_LABELS, User } from '@/types/vehicle';
 
 interface VehicleInspectionFormProps {
+  onInspectionSave: (inspection: Omit<VehicleInspection, 'id' | 'timestamp' | 'consecutiveNumber'>) => void;
   user: User;
 }
 
-type PhotoType = 'frontal' | 'lateral_derecha' | 'lateral_izquierda' | 'posterior' | 'llanta_repuesto' | 'extintor';
-
-const VehicleInspectionForm = ({ user }: VehicleInspectionFormProps) => {
+const VehicleInspectionForm = ({ onInspectionSave, user }: VehicleInspectionFormProps) => {
   const [placa, setPlaca] = useState('');
   const [observaciones, setObservaciones] = useState('');
-  const [fechaVencimientoExtintor, setFechaVencimientoExtintor] = useState<Date | undefined>(undefined);
-  const [capturedPhotos, setCapturedPhotos] = useState<{ [key in PhotoType]?: File }>({});
+  const [fechaVencimientoExtintor, setFechaVencimientoExtintor] = useState('');
+  const [photos, setPhotos] = useState<Record<PhotoType, File | null>>({
+    frontal: null,
+    panoramico: null,
+    izquierda: null,
+    llanta_p1: null,
+    llanta_p3: null,
+    panoramico_interno: null,
+    interior_delantera: null,
+    interior_trasera: null,
+    interior_techo: null,
+    kit_carretera: null,
+    repuesto_gata: null,
+    trasera: null,
+    llanta_p4: null,
+    llanta_p2: null,
+    derecha: null,
+  });
+  const [photoUrls, setPhotoUrls] = useState<Record<PhotoType, string | null>>({
+    frontal: null,
+    panoramico: null,
+    izquierda: null,
+    llanta_p1: null,
+    llanta_p3: null,
+    panoramico_interno: null,
+    interior_delantera: null,
+    interior_trasera: null,
+    interior_techo: null,
+    kit_carretera: null,
+    repuesto_gata: null,
+    trasera: null,
+    llanta_p4: null,
+    llanta_p2: null,
+    derecha: null,
+  });
   const [isLoading, setIsLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { uploadPhoto, createInspection, addInspectionPhoto, fetchData } = useSupabaseData();
+
+  // Orden específico solicitado por el usuario
+  const photoTypes: PhotoType[] = [
+    'frontal', 'panoramico', 'izquierda', 'llanta_p1', 'llanta_p3',
+    'panoramico_interno', 'interior_delantera', 'interior_trasera', 'interior_techo',
+    'kit_carretera', 'repuesto_gata', 'trasera', 'llanta_p4', 'llanta_p2', 'derecha'
+  ];
+
+  const handlePhotoCapture = (photoType: PhotoType, file: File) => {
+    const url = URL.createObjectURL(file);
+    setPhotos(prev => ({ ...prev, [photoType]: file }));
+    setPhotoUrls(prev => ({ ...prev, [photoType]: url }));
+    
+    toast({
+      title: "Foto capturada",
+      description: `${PHOTO_LABELS[photoType]} guardada exitosamente`,
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,373 +85,167 @@ const VehicleInspectionForm = ({ user }: VehicleInspectionFormProps) => {
       return;
     }
 
+    const capturedPhotos = Object.entries(photos).filter(([_, file]) => file !== null);
+    
+    if (capturedPhotos.length === 0) {
+      toast({
+        title: "Fotos requeridas",
+        description: "Debes capturar al menos una foto para completar el alistamiento",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Crear el alistamiento - sin consecutive_number ya que se genera automáticamente
-      const inspectionData = {
+      const vehiclePhotos = capturedPhotos.map(([type, file]) => ({
+        id: `${Date.now()}-${type}`,
+        type: type as PhotoType,
+        url: photoUrls[type as PhotoType]!,
+        timestamp: new Date()
+      }));
+
+      const inspection: Omit<VehicleInspection, 'id' | 'timestamp' | 'consecutiveNumber'> = {
         placa: placa.toUpperCase(),
-        observaciones: observaciones || null,
-        fecha_vencimiento_extintor: fechaVencimientoExtintor ? format(fechaVencimientoExtintor, 'yyyy-MM-dd') : null,
-        inspector_id: user.id,
-        agency_id: user.department !== 'Sin asignar' ? user.department : null,
+        photos: vehiclePhotos,
+        observaciones,
+        fechaVencimientoExtintor: fechaVencimientoExtintor || undefined,
+        inspector: {
+          email: user.email,
+          name: user.name,
+          userId: user.id
+        },
+        department: user.department || 'No asignada'
       };
 
-      const inspection = await createInspection(inspectionData);
-      
-      if (inspection) {
-        // Subir fotos si existen
-        for (const [type, file] of Object.entries(capturedPhotos)) {
-          if (file) {
-            try {
-              const photoUrl = await uploadPhoto(file, inspection.id, type as PhotoType);
-              await addInspectionPhoto(inspection.id, type as PhotoType, photoUrl);
-            } catch (photoError) {
-              console.error(`Error uploading ${type}:`, photoError);
-            }
-          }
-        }
+      onInspectionSave(inspection);
 
-        toast({
-          title: "¡Alistamiento completado!",
-          description: `Alistamiento #${inspection.consecutive_number} guardado exitosamente`,
-        });
+      toast({
+        title: "✅ Alistamiento completado",
+        description: `El alistamiento del vehículo ${placa.toUpperCase()} ha sido guardado exitosamente`,
+      });
 
-        // Reset form
-        setPlaca('');
-        setObservaciones('');
-        setFechaVencimientoExtintor(undefined);
-        setCapturedPhotos({});
-        setIsLoading(false);
-        
-        // Refresh data
-        await fetchData();
-      }
+      // Limpiar formulario
+      setPlaca('');
+      setObservaciones('');
+      setFechaVencimientoExtintor('');
+      Object.values(photoUrls).forEach(url => {
+        if (url) URL.revokeObjectURL(url);
+      });
+      setPhotos(Object.fromEntries(photoTypes.map(type => [type, null])) as Record<PhotoType, File | null>);
+      setPhotoUrls(Object.fromEntries(photoTypes.map(type => [type, null])) as Record<PhotoType, string | null>);
+
     } catch (error) {
-      console.error('Error creating inspection:', error);
       toast({
         title: "Error",
-        description: "No se pudo guardar el alistamiento. Intenta nuevamente.",
+        description: "Hubo un problema al guardar el alistamiento",
         variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePhotoCapture = (type: PhotoType, event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setCapturedPhotos(prevPhotos => ({ ...prevPhotos, [type]: file }));
-    }
-  };
-
-  const clearPhoto = (type: PhotoType) => {
-    setCapturedPhotos(prevPhotos => {
-      const newPhotos = { ...prevPhotos };
-      delete newPhotos[type];
-      return newPhotos;
-    });
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <Label htmlFor="placa">Placa del Vehículo</Label>
-        <Input
-          type="text"
-          id="placa"
-          placeholder="Ingresa la placa"
-          value={placa}
-          onChange={(e) => setPlaca(e.target.value)}
-          className="w-full"
-        />
-      </div>
+    <div className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Card className="card-professional">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-3 text-green-800">
+              <Car className="w-6 h-6" />
+              <span>Información del Vehículo</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <label htmlFor="placa" className="block text-sm font-semibold text-gray-700 mb-2">
+                Placa del Vehículo *
+              </label>
+              <Input
+                id="placa"
+                type="text"
+                value={placa}
+                onChange={(e) => setPlaca(e.target.value.toUpperCase())}
+                placeholder="ABC123"
+                className="uppercase text-lg font-semibold h-12 border-2 border-green-200 focus:border-green-500"
+                maxLength={6}
+                required
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-      <div>
-        <Label htmlFor="observaciones">Observaciones</Label>
-        <Textarea
-          id="observaciones"
-          placeholder="Ingresa las observaciones"
-          value={observaciones}
-          onChange={(e) => setObservaciones(e.target.value)}
-          className="w-full"
-        />
-      </div>
+        <Card className="card-professional">
+          <CardHeader>
+            <CardTitle className="text-green-800 text-xl">📸 Captura de Fotos</CardTitle>
+            <p className="text-gray-600">Toca cada botón para abrir la cámara y capturar la foto correspondiente</p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {photoTypes.map((photoType) => (
+                <PhotoCapture
+                  key={photoType}
+                  photoType={photoType}
+                  onPhotoCapture={handlePhotoCapture}
+                  capturedPhoto={photoUrls[photoType] || undefined}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
-      <div>
-        <Label>Fecha de Vencimiento del Extintor</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant={"outline"}
-              className={cn(
-                "w-[240px] justify-start text-left font-normal",
-                !fechaVencimientoExtintor && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {fechaVencimientoExtintor ? (
-                format(fechaVencimientoExtintor, "PPP")
-              ) : (
-                <span>Seleccionar fecha</span>
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={fechaVencimientoExtintor}
-              onSelect={setFechaVencimientoExtintor}
-              disabled={(date) =>
-                date < new Date()
-              }
-              initialFocus
+        <Card className="card-professional">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-3 text-green-800">
+              <Calendar className="w-6 h-6" />
+              <span>Fecha de Vencimiento del Extintor</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <label htmlFor="fechaExtintor" className="block text-sm font-semibold text-gray-700 mb-2">
+                Fecha de Vencimiento del Extintor
+              </label>
+              <Input
+                id="fechaExtintor"
+                type="date"
+                value={fechaVencimientoExtintor}
+                onChange={(e) => setFechaVencimientoExtintor(e.target.value)}
+                className="h-12 border-2 border-green-200 focus:border-green-500"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-professional">
+          <CardHeader>
+            <CardTitle className="text-green-800">📝 Observaciones Adicionales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              value={observaciones}
+              onChange={(e) => setObservaciones(e.target.value)}
+              placeholder="Escribe aquí cualquier observación adicional sobre el estado del vehículo..."
+              rows={4}
+              className="w-full border-2 border-green-200 focus:border-green-500 resize-none"
             />
-          </PopoverContent>
-        </Popover>
-      </div>
+          </CardContent>
+        </Card>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Frontal Photo */}
-        <div>
-          <Label htmlFor="frontalPhoto">Foto Frontal</Label>
-          <Input
-            type="file"
-            id="frontalPhoto"
-            accept="image/*"
-            onChange={(e) => handlePhotoCapture('frontal', e)}
-            className="hidden"
-            ref={fileInputRef}
-          />
-          <div className="flex items-center space-x-2 mt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => document.getElementById('frontalPhoto')?.click()}
-            >
-              Tomar Foto
-            </Button>
-            {capturedPhotos['frontal'] && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => clearPhoto('frontal')}
-              >
-                Quitar
-              </Button>
-            )}
-          </div>
-          {capturedPhotos['frontal'] && (
-            <img
-              src={URL.createObjectURL(capturedPhotos['frontal'])}
-              alt="Foto Frontal"
-              className="mt-2 rounded-md"
-            />
-          )}
+        <div className="flex justify-center py-6">
+          <Button
+            type="submit"
+            className="localiza-gradient text-white px-12 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
+            disabled={isLoading}
+            size="lg"
+          >
+            <Save className="w-6 h-6 mr-3" />
+            {isLoading ? 'Guardando Alistamiento...' : 'Guardar Alistamiento Completo'}
+          </Button>
         </div>
-
-        {/* Lateral Derecha Photo */}
-        <div>
-          <Label htmlFor="lateralDerechaPhoto">Foto Lateral Derecha</Label>
-          <Input
-            type="file"
-            id="lateralDerechaPhoto"
-            accept="image/*"
-            onChange={(e) => handlePhotoCapture('lateral_derecha', e)}
-            className="hidden"
-            ref={fileInputRef}
-          />
-          <div className="flex items-center space-x-2 mt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => document.getElementById('lateralDerechaPhoto')?.click()}
-            >
-              Tomar Foto
-            </Button>
-            {capturedPhotos['lateral_derecha'] && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => clearPhoto('lateral_derecha')}
-              >
-                Quitar
-              </Button>
-            )}
-          </div>
-          {capturedPhotos['lateral_derecha'] && (
-            <img
-              src={URL.createObjectURL(capturedPhotos['lateral_derecha'])}
-              alt="Foto Lateral Derecha"
-              className="mt-2 rounded-md"
-            />
-          )}
-        </div>
-
-        {/* Lateral Izquierda Photo */}
-        <div>
-          <Label htmlFor="lateralIzquierdaPhoto">Foto Lateral Izquierda</Label>
-          <Input
-            type="file"
-            id="lateralIzquierdaPhoto"
-            accept="image/*"
-            onChange={(e) => handlePhotoCapture('lateral_izquierda', e)}
-            className="hidden"
-            ref={fileInputRef}
-          />
-          <div className="flex items-center space-x-2 mt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => document.getElementById('lateralIzquierdaPhoto')?.click()}
-            >
-              Tomar Foto
-            </Button>
-            {capturedPhotos['lateral_izquierda'] && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => clearPhoto('lateral_izquierda')}
-              >
-                Quitar
-              </Button>
-            )}
-          </div>
-          {capturedPhotos['lateral_izquierda'] && (
-            <img
-              src={URL.createObjectURL(capturedPhotos['lateral_izquierda'])}
-              alt="Foto Lateral Izquierda"
-              className="mt-2 rounded-md"
-            />
-          )}
-        </div>
-
-        {/* Posterior Photo */}
-        <div>
-          <Label htmlFor="posteriorPhoto">Foto Posterior</Label>
-          <Input
-            type="file"
-            id="posteriorPhoto"
-            accept="image/*"
-            onChange={(e) => handlePhotoCapture('posterior', e)}
-            className="hidden"
-            ref={fileInputRef}
-          />
-          <div className="flex items-center space-x-2 mt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => document.getElementById('posteriorPhoto')?.click()}
-            >
-              Tomar Foto
-            </Button>
-            {capturedPhotos['posterior'] && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => clearPhoto('posterior')}
-              >
-                Quitar
-              </Button>
-            )}
-          </div>
-          {capturedPhotos['posterior'] && (
-            <img
-              src={URL.createObjectURL(capturedPhotos['posterior'])}
-              alt="Foto Posterior"
-              className="mt-2 rounded-md"
-            />
-          )}
-        </div>
-
-        {/* Llanta de Repuesto Photo */}
-        <div>
-          <Label htmlFor="llantaRepuestoPhoto">Foto Llanta de Repuesto</Label>
-          <Input
-            type="file"
-            id="llantaRepuestoPhoto"
-            accept="image/*"
-            onChange={(e) => handlePhotoCapture('llanta_repuesto', e)}
-            className="hidden"
-            ref={fileInputRef}
-          />
-          <div className="flex items-center space-x-2 mt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => document.getElementById('llantaRepuestoPhoto')?.click()}
-            >
-              Tomar Foto
-            </Button>
-            {capturedPhotos['llanta_repuesto'] && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => clearPhoto('llanta_repuesto')}
-              >
-                Quitar
-              </Button>
-            )}
-          </div>
-          {capturedPhotos['llanta_repuesto'] && (
-            <img
-              src={URL.createObjectURL(capturedPhotos['llanta_repuesto'])}
-              alt="Foto Llanta de Repuesto"
-              className="mt-2 rounded-md"
-            />
-          )}
-        </div>
-
-        {/* Extintor Photo */}
-        <div>
-          <Label htmlFor="extintorPhoto">Foto Extintor</Label>
-          <Input
-            type="file"
-            id="extintorPhoto"
-            accept="image/*"
-            onChange={(e) => handlePhotoCapture('extintor', e)}
-            className="hidden"
-            ref={fileInputRef}
-          />
-          <div className="flex items-center space-x-2 mt-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => document.getElementById('extintorPhoto')?.click()}
-            >
-              Tomar Foto
-            </Button>
-            {capturedPhotos['extintor'] && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => clearPhoto('extintor')}
-              >
-                Quitar
-              </Button>
-            )}
-          </div>
-          {capturedPhotos['extintor'] && (
-            <img
-              src={URL.createObjectURL(capturedPhotos['extintor'])}
-              alt="Foto Extintor"
-              className="mt-2 rounded-md"
-            />
-          )}
-        </div>
-      </div>
-
-      <Button
-        type="submit"
-        className="w-full localiza-gradient hover:opacity-90 transition-opacity"
-        disabled={isLoading}
-      >
-        {isLoading ? 'Guardando...' : 'Guardar Alistamiento'}
-      </Button>
-    </form>
+      </form>
+    </div>
   );
 };
 

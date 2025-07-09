@@ -1,19 +1,38 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/Header';
-import AuthForm from '@/components/AuthForm';
+import LoginForm from '@/components/LoginForm';
+import UserRegistration from '@/components/UserRegistration';
+import PinLogin from '@/components/PinLogin';
 import VehicleInspectionForm from '@/components/VehicleInspectionForm';
 import InspectionHistory from '@/components/InspectionHistory';
 import AdminPanel from '@/components/AdminPanel';
 import LoadingOverlay from '@/components/LoadingOverlay';
-import { useAuth } from '@/hooks/useAuth';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { VehicleInspection, User, DEFAULT_AGENCIES, Agency } from '@/types/vehicle';
 
 const Index = () => {
-  const { user, profile, loading: authLoading, signOut } = useAuth();
-  const { inspections, agencies, loading: dataLoading, fetchData } = useSupabaseData();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [inspections, setInspections] = useState<VehicleInspection[]>([]);
+  const [loginStep, setLoginStep] = useState<'email' | 'register' | 'pin'>('email');
+  const [tempLoginData, setTempLoginData] = useState<{ email: string; name: string } | null>(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [consecutiveCounter, setConsecutiveCounter] = useState(1);
+  const [agencies, setAgencies] = useState<Agency[]>(DEFAULT_AGENCIES);
+
+  // Tema oscuro
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('localiza_dark_mode');
+    if (savedDarkMode) {
+      const isDark = JSON.parse(savedDarkMode);
+      setDarkMode(isDark);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      }
+    }
+  }, []);
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
@@ -27,62 +46,201 @@ const Index = () => {
     }
   };
 
-  React.useEffect(() => {
-    const savedDarkMode = localStorage.getItem('localiza_dark_mode');
-    if (savedDarkMode) {
-      const isDark = JSON.parse(savedDarkMode);
-      setDarkMode(isDark);
-      if (isDark) {
-        document.documentElement.classList.add('dark');
-      }
+  // Cargar datos del localStorage al iniciar
+  useEffect(() => {
+    const savedUser = localStorage.getItem('localiza_current_user');
+    const savedUsers = localStorage.getItem('localiza_users');
+    const savedInspections = localStorage.getItem('localiza_inspections');
+    const savedCounter = localStorage.getItem('localiza_consecutive_counter');
+    const savedAgencies = localStorage.getItem('localiza_agencies');
+    
+    if (savedUser) {
+      setCurrentUser(JSON.parse(savedUser));
+    }
+    
+    if (savedUsers) {
+      const parsedUsers = JSON.parse(savedUsers);
+      const usersWithDates = parsedUsers.map((user: any) => ({
+        ...user,
+        createdAt: new Date(user.createdAt)
+      }));
+      setUsers(usersWithDates);
+    }
+    
+    if (savedInspections) {
+      const parsedInspections = JSON.parse(savedInspections);
+      const inspectionsWithDates = parsedInspections.map((inspection: any) => ({
+        ...inspection,
+        timestamp: new Date(inspection.timestamp),
+        photos: inspection.photos.map((photo: any) => ({
+          ...photo,
+          timestamp: new Date(photo.timestamp)
+        }))
+      }));
+      setInspections(inspectionsWithDates);
+    }
+
+    if (savedCounter) {
+      setConsecutiveCounter(parseInt(savedCounter));
+    }
+
+    if (savedAgencies) {
+      setAgencies(JSON.parse(savedAgencies));
     }
   }, []);
 
-  if (authLoading) {
-    return <LoadingOverlay isVisible={true} message="Cargando aplicación..." />;
-  }
-
-  if (!user || !profile) {
-    return <AuthForm />;
-  }
-
-  const currentUser = {
-    id: profile.id,
-    email: profile.email,
-    name: profile.name,
-    pin: profile.pin,
-    isAdmin: profile.is_admin || false,
-    department: profile.agency_id || 'Sin asignar',
-    createdAt: new Date(profile.created_at || Date.now())
+  const showLoading = (message: string, duration: number = 2000) => {
+    setLoadingMessage(message);
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+    }, duration);
   };
 
-  // Convertir inspections de Supabase al formato esperado por InspectionHistory
-  const vehicleInspections = inspections.map(inspection => ({
-    id: inspection.id,
-    consecutiveNumber: inspection.consecutive_number,
-    placa: inspection.placa,
-    photos: inspection.inspection_photos?.map(photo => ({
-      id: photo.id,
-      type: photo.photo_type as any,
-      url: photo.photo_url,
-      timestamp: new Date()
-    })) || [],
-    observaciones: inspection.observaciones || '',
-    fechaVencimientoExtintor: inspection.fecha_vencimiento_extintor || undefined,
-    inspector: {
-      email: inspection.profiles?.email || '',
-      name: inspection.profiles?.name || '',
-      userId: inspection.inspector_id
-    },
-    department: inspection.agencies?.name || 'Sin asignar',
-    timestamp: new Date(inspection.created_at || Date.now())
-  }));
+  const handleEmailLogin = (email: string, name: string) => {
+    setTempLoginData({ email, name });
+    showLoading('Verificando usuario...', 1500);
+    
+    setTimeout(() => {
+      if (email === 'admin@rentingcolombia.com') {
+        setLoginStep('pin');
+        return;
+      }
+      
+      const existingUser = users.find(u => u.email === email);
+      if (existingUser) {
+        setLoginStep('pin');
+      } else {
+        setLoginStep('register');
+      }
+    }, 1500);
+  };
+
+  const handleUserRegistered = (user: User) => {
+    showLoading('Creando usuario...', 1500);
+    
+    setTimeout(() => {
+      const updatedUsers = [...users, user];
+      setUsers(updatedUsers);
+      setCurrentUser(user);
+      localStorage.setItem('localiza_users', JSON.stringify(updatedUsers));
+      localStorage.setItem('localiza_current_user', JSON.stringify(user));
+      setLoginStep('email');
+      setTempLoginData(null);
+    }, 1500);
+  };
+
+  const handlePinLogin = (user: User) => {
+    showLoading('Iniciando sesión...', 1500);
+    
+    setTimeout(() => {
+      setCurrentUser(user);
+      localStorage.setItem('localiza_current_user', JSON.stringify(user));
+      setLoginStep('email');
+      setTempLoginData(null);
+    }, 1500);
+  };
+
+  const handleLogout = () => {
+    showLoading('Cerrando sesión...', 1500);
+    
+    setTimeout(() => {
+      setCurrentUser(null);
+      setLoginStep('email');
+      setTempLoginData(null);
+      localStorage.removeItem('localiza_current_user');
+    }, 1500);
+  };
+
+  const handleBackToEmailLogin = () => {
+    setLoginStep('email');
+    setTempLoginData(null);
+  };
+
+  const handleInspectionSave = (inspectionData: Omit<VehicleInspection, 'id' | 'timestamp' | 'consecutiveNumber'>) => {
+    showLoading('Guardando alistamiento...', 2000);
+    
+    setTimeout(() => {
+      const newInspection: VehicleInspection = {
+        ...inspectionData,
+        id: `inspection_${Date.now()}`,
+        consecutiveNumber: consecutiveCounter,
+        timestamp: new Date()
+      };
+      
+      const updatedInspections = [...inspections, newInspection];
+      const newCounter = consecutiveCounter + 1;
+      
+      setInspections(updatedInspections);
+      setConsecutiveCounter(newCounter);
+      
+      localStorage.setItem('localiza_inspections', JSON.stringify(updatedInspections));
+      localStorage.setItem('localiza_consecutive_counter', newCounter.toString());
+    }, 2000);
+  };
+
+  const handleUpdateUsers = (updatedUsers: User[]) => {
+    showLoading('Actualizando usuarios...', 1500);
+    
+    setTimeout(() => {
+      setUsers(updatedUsers);
+      localStorage.setItem('localiza_users', JSON.stringify(updatedUsers));
+    }, 1500);
+  };
+
+  const handleUpdateAgencies = (updatedAgencies: Agency[]) => {
+    showLoading('Actualizando agencias...', 1500);
+    
+    setTimeout(() => {
+      setAgencies(updatedAgencies);
+      localStorage.setItem('localiza_agencies', JSON.stringify(updatedAgencies));
+    }, 1500);
+  };
+
+  if (!currentUser) {
+    if (loginStep === 'register' && tempLoginData) {
+      return (
+        <>
+          <UserRegistration
+            email={tempLoginData.email}
+            name={tempLoginData.name}
+            onUserRegistered={handleUserRegistered}
+            existingUsers={users}
+            agencies={agencies}
+          />
+          <LoadingOverlay isVisible={loading} message={loadingMessage} />
+        </>
+      );
+    }
+
+    if (loginStep === 'pin' && tempLoginData) {
+      return (
+        <>
+          <PinLogin
+            email={tempLoginData.email}
+            name={tempLoginData.name}
+            onLogin={handlePinLogin}
+            users={users}
+            onBackToEmailLogin={handleBackToEmailLogin}
+          />
+          <LoadingOverlay isVisible={loading} message={loadingMessage} />
+        </>
+      );
+    }
+
+    return (
+      <>
+        <LoginForm onLogin={handleEmailLogin} />
+        <LoadingOverlay isVisible={loading} message={loadingMessage} />
+      </>
+    );
+  }
 
   return (
     <div className={`min-h-screen transition-colors duration-300 ${darkMode ? 'dark bg-gray-900' : 'bg-gradient-to-br from-green-50 to-green-100'}`}>
       <Header 
         user={currentUser} 
-        onLogout={signOut} 
+        onLogout={handleLogout} 
         darkMode={darkMode}
         toggleDarkMode={toggleDarkMode}
       />
@@ -115,7 +273,7 @@ const Index = () => {
                   Documenta el estado del vehículo con fotos detalladas
                 </p>
               </div>
-              <VehicleInspectionForm user={currentUser} />
+              <VehicleInspectionForm onInspectionSave={handleInspectionSave} user={currentUser} />
             </TabsContent>
           )}
 
@@ -128,7 +286,7 @@ const Index = () => {
                 Busca y revisa alistamientos anteriores por placa
               </p>
             </div>
-            <InspectionHistory inspections={vehicleInspections} />
+            <InspectionHistory inspections={inspections} />
           </TabsContent>
 
           {currentUser.isAdmin && (
@@ -142,11 +300,11 @@ const Index = () => {
                 </p>
               </div>
               <AdminPanel 
-                users={[]} 
-                inspections={vehicleInspections}
-                onUpdateUsers={() => fetchData()}
+                users={users} 
+                inspections={inspections}
+                onUpdateUsers={handleUpdateUsers}
                 agencies={agencies}
-                onUpdateAgencies={() => fetchData()}
+                onUpdateAgencies={handleUpdateAgencies}
               />
             </TabsContent>
           )}
@@ -161,13 +319,13 @@ const Index = () => {
               <span className="font-semibold text-green-700 dark:text-green-400">Charly Hernando Avendaño</span>
             </p>
             <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-              Ingeniero de Sistemas - Versión 2.0
+              Ingeniero de Sistemas - Versión 1.0
             </p>
           </div>
         </div>
       </footer>
 
-      <LoadingOverlay isVisible={dataLoading} message="Cargando datos..." />
+      <LoadingOverlay isVisible={loading} message={loadingMessage} />
     </div>
   );
 };
